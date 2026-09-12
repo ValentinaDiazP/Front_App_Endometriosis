@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'core/navigation/app_router.dart';
+import 'features/educativo/presentation/screens/educativo_home_screen.dart';
 
 void main() {
   runApp(const FlorecerApp());
@@ -58,6 +60,7 @@ class FlorecerApp extends StatelessWidget {
         ),
       ),
       home: const AuthScreen(),
+      onGenerateRoute: AppRouter.onGenerateRoute,
     );
   }
 }
@@ -477,6 +480,7 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
     const CommunityForumModule(),  // Módulo Comunidad
     const SymptomLogModule(),       // Módulo Registro
     const ReportsModule(),          // Módulo Reportes
+    const EducativoHomeScreen(),    // Módulo Educativo
   ];
 
   void _onItemTapped(int index) {
@@ -495,6 +499,7 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
           BottomNavigationBarItem(icon: Icon(Icons.people_outline), label: 'Comunidad'),
           BottomNavigationBarItem(icon: Icon(Icons.edit_note), label: 'Registro'),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Reportes'),
+          BottomNavigationBarItem(icon: Icon(Icons.school_outlined), label: 'Educativo'),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: AppColors.primary,

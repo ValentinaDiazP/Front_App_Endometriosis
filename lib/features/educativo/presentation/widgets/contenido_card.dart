@@ -1,0 +1,85 @@
+import 'package:flutter/material.dart';
+import '../../models/contenido_educativo.dart';
+import 'nivel_badge.dart';
+
+class ContenidoCard extends StatelessWidget {
+  final ContenidoEducativo contenido;
+  final VoidCallback onTap;
+
+  const ContenidoCard({super.key, required this.contenido, required this.onTap});
+
+  IconData get _icono {
+    switch (contenido.tipo) {
+      case TipoContenido.texto:
+        return Icons.article_outlined;
+      case TipoContenido.video:
+        return Icons.play_circle_outline;
+      case TipoContenido.audio:
+        return Icons.headphones_outlined;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: const Color(0xFFF1EAFB),
+                child: Icon(_icono, color: const Color(0xFF8E6BBF)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            contenido.titulo,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        if (contenido.esPremium)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: Icon(Icons.workspace_premium, size: 18, color: Color(0xFFE98BA0)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      contenido.resumen,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.black54, fontSize: 13),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        NivelBadge(nivel: contenido.nivel),
+                        const SizedBox(width: 8),
+                        Icon(Icons.timer_outlined, size: 14, color: Colors.grey[500]),
+                        const SizedBox(width: 3),
+                        Text('${contenido.minutosEstimados} min',
+                            style: TextStyle(fontSize: 11.5, color: Colors.grey[600])),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
