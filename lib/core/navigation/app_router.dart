@@ -7,7 +7,9 @@ import '../../features/educativo/presentation/screens/educativo_home_screen.dart
 import '../../features/educativo/presentation/screens/contenido_detail_screen.dart';
 import '../../features/educativo/presentation/screens/ejercicio_detail_screen.dart';
 import '../../features/educativo/presentation/screens/ruta_detail_screen.dart';
-
+import '../../features/seguimiento/seguimiento_routes.dart';
+import '../../features/seguimiento/presentation/screens/registro_sintoma_screen.dart';
+import '../../features/seguimiento/models/informacion_personal.dart';
 /// Router centralizado por `onGenerateRoute`. Es deliberadamente simple
 /// (sin paquetes externos como go_router) para que sea fácil de fusionar con
 /// el router del proyecto completo más adelante; si el equipo decide usar
@@ -32,6 +34,10 @@ class AppRouter {
       case EducativoRoutes.rutaDetalle:
         final ruta = settings.arguments as RutaAprendizaje;
         return _page(RutaDetailScreen(ruta: ruta));
+        
+      case SeguimientoRoutes.registroSintoma:
+        final informacionPersonal = settings.arguments as InformacionPersonal;
+        return _page(RegistroSintomaScreen(informacionPersonal: informacionPersonal));
 
       default:
         return _page(

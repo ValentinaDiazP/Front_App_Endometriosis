@@ -4,6 +4,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'core/navigation/app_router.dart';
 import 'features/educativo/presentation/screens/educativo_home_screen.dart';
+import 'features/seguimiento/presentation/screens/informacion_personal_screen.dart';
+import 'features/seguimiento/models/informacion_personal.dart';
+import 'features/seguimiento/presentation/screens/registro_sintoma_screen.dart';
 
 void main() {
   runApp(const FlorecerApp());
@@ -168,16 +171,35 @@ class DiagnosisScreen extends StatelessWidget {
   const DiagnosisScreen({super.key});
 
   void _navigateToNext(BuildContext context, String diagnosis) {
-    if (diagnosis == 'Endometriosis') {
+      // Antes de ir al cuestionario o al hub principal, se captura la
+      // información personal una sola vez (ver InformacionPersonalScreen,
+      // reutilizada aquí desde el módulo de Seguimiento).
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const QuestionnaireScreen()),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainNavigationHub()),
+        MaterialPageRoute(
+          builder: (_) => InformacionPersonalScreen(
+            onContinuar: (nuevoContext, informacionPersonal) {
+              if (diagnosis == 'Endometriosis') {
+                Navigator.of(nuevoContext).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => QuestionnaireScreen(
+                      informacionPersonal: informacionPersonal,
+                    ),
+                  ),
+                );
+              } else {
+                Navigator.of(nuevoContext).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => MainNavigationHub(
+                      informacionPersonal: informacionPersonal,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+        ),
       );
     }
-  }
 
   Widget _buildDiagnosisCard(BuildContext context, String title, IconData icon) {
     return Card(
@@ -282,7 +304,9 @@ class SafetyNoticeCard extends StatelessWidget {
 // --- 3. MÓDULO DE CUESTIONARIO ---
 
 class QuestionnaireScreen extends StatefulWidget {
-  const QuestionnaireScreen({super.key});
+  final InformacionPersonal informacionPersonal;
+
+  const QuestionnaireScreen({super.key, required this.informacionPersonal});
 
   @override
   State<QuestionnaireScreen> createState() => _QuestionnaireScreenState();
@@ -318,8 +342,13 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
         curve: Curves.easeIn,
       );
     } else {
+      // Al finalizar el cuestionario, se navega al hub principal
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainNavigationHub()),
+        MaterialPageRoute(
+          builder: (context) => MainNavigationHub(
+            informacionPersonal: widget.informacionPersonal,
+          ),
+        ),
       );
     }
   }
@@ -466,7 +495,9 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 // --- 4. HUB DE NAVEGACIÓN PRINCIPAL ---
 
 class MainNavigationHub extends StatefulWidget {
-  const MainNavigationHub({super.key});
+  final InformacionPersonal informacionPersonal;
+
+  const MainNavigationHub({super.key, required this.informacionPersonal});
 
   @override
   State<MainNavigationHub> createState() => _MainNavigationHubState();
@@ -475,12 +506,18 @@ class MainNavigationHub extends StatefulWidget {
 class _MainNavigationHubState extends State<MainNavigationHub> {
   int _selectedIndex = 0;
 
-  static final List<Widget> _widgetOptions = <Widget>[
-    const WellnessModule(),         // Módulo Bienestar Actualizado
-    const CommunityForumModule(),  // Módulo Comunidad
-    const SymptomLogModule(),       // Módulo Registro
-    const ReportsModule(),          // Módulo Reportes
-    const EducativoHomeScreen(),    // Módulo Educativo
+  // `late final` en vez de `static final`: ahora depende de
+  // `widget.informacionPersonal`, que solo existe una vez montado el
+  // widget, así que no puede calcularse en tiempo de compilación como antes.
+  late final List<Widget> _widgetOptions = <Widget>[
+    const WellnessModule(), // Módulo Bienestar Actualizado
+    const CommunityForumModule(), // Módulo Comunidad
+    RegistroSintomaScreen(
+      informacionPersonal: widget.informacionPersonal,
+      onFinalizado: () => setState(() => _selectedIndex = 0),
+    ), // Módulo Registro (Seguimiento)
+    const ReportsModule(), // Módulo Reportes
+    const EducativoHomeScreen(), // Módulo Educativo
   ];
 
   void _onItemTapped(int index) {
@@ -492,7 +529,12 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(child: _widgetOptions.elementAt(_selectedIndex)),
+      // IndexedStack en vez de Center: mantiene vivas todas las pestañas
+      // (no se pierde el estado al cambiar de pestaña y volver).
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _widgetOptions,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Bienestar'),
