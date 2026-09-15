@@ -4,9 +4,15 @@ import 'nivel_badge.dart';
 
 class ContenidoCard extends StatelessWidget {
   final ContenidoEducativo contenido;
+  final bool completado;
   final VoidCallback onTap;
 
-  const ContenidoCard({super.key, required this.contenido, required this.onTap});
+  const ContenidoCard({
+    super.key,
+    required this.contenido,
+    required this.onTap,
+    this.completado = false,
+  });
 
   IconData get _icono {
     switch (contenido.tipo) {
@@ -32,8 +38,11 @@ class ContenidoCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor: const Color(0xFFF1EAFB),
-                child: Icon(_icono, color: const Color(0xFF8E6BBF)),
+                backgroundColor: completado ? Colors.green.shade50 : const Color(0xFFF1EAFB),
+                child: Icon(
+                  completado ? Icons.check_circle : _icono,
+                  color: completado ? Colors.green : const Color(0xFF8E6BBF),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -71,6 +80,11 @@ class ContenidoCard extends StatelessWidget {
                         const SizedBox(width: 3),
                         Text('${contenido.minutosEstimados} min',
                             style: TextStyle(fontSize: 11.5, color: Colors.grey[600])),
+                        if (completado) ...[
+                          const SizedBox(width: 8),
+                          const Text('· Completado',
+                              style: TextStyle(fontSize: 11.5, color: Colors.green, fontWeight: FontWeight.w600)),
+                        ],
                       ],
                     ),
                   ],

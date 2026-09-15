@@ -16,6 +16,10 @@ extension TipoEjercicioLabel on TipoEjercicio {
 }
 
 /// Espejo del frontend de la tabla `EjercicioPsicoeducativo`.
+///
+/// El estado de completado NO vive aquí: se consulta en vivo con
+/// MockEducativoData.ejercicioCompletado(idEjercicio), igual que con los
+/// contenidos de la biblioteca.
 class EjercicioPsicoeducativo {
   final String idEjercicio;
   final String nombre;
@@ -23,7 +27,6 @@ class EjercicioPsicoeducativo {
   final String descripcion;
   final String instrucciones;
   final int minutosEstimados;
-  final bool completadoPorUsuario; // vendrá de RegistroEjercicio en el back
 
   const EjercicioPsicoeducativo({
     required this.idEjercicio,
@@ -32,6 +35,5 @@ class EjercicioPsicoeducativo {
     required this.descripcion,
     required this.instrucciones,
     required this.minutosEstimados,
-    this.completadoPorUsuario = false,
   });
 }

@@ -90,7 +90,6 @@ class MockEducativoData {
       instrucciones:
           'Lee cada tarjeta y marca la casilla al terminar. Tómate tu tiempo.',
       minutosEstimados: 7,
-      completadoPorUsuario: true,
     ),
     EjercicioPsicoeducativo(
       idEjercicio: 'e2',
@@ -125,14 +124,41 @@ class MockEducativoData {
           nombre: 'Primeros pasos con la endometriosis',
           descripcion: 'Ruta introductoria para usuarias recién diagnosticadas.',
           contenidos: [contenidos[0], contenidos[1], contenidos[2]],
-          contenidosCompletados: 1,
         ),
         RutaAprendizaje(
           idRuta: 'r2',
           nombre: 'Manejo del dolor con enfoque TCC',
           descripcion: 'Ruta intermedia centrada en pensamientos y dolor.',
           contenidos: [contenidos[1], contenidos[3]],
-          contenidosCompletados: 0,
         ),
       ];
+
+  // ---------------------------------------------------------------------
+  // Estado de progreso (mock, en memoria). Cuando exista backend, esto se
+  // reemplaza por lecturas/escrituras reales a InteraccionContenido y
+  // RegistroEjercicio (ver diagrama ER del módulo).
+  // ---------------------------------------------------------------------
+
+  static final Set<String> _contenidosCompletados = {'c1'};
+  static final Set<String> _ejerciciosCompletados = {'e1'};
+
+  static bool contenidoCompletado(String idContenido) =>
+      _contenidosCompletados.contains(idContenido);
+
+  static void marcarContenidoCompletado(String idContenido) {
+    _contenidosCompletados.add(idContenido);
+  }
+
+  static bool ejercicioCompletado(String idEjercicio) =>
+      _ejerciciosCompletados.contains(idEjercicio);
+
+  static void marcarEjercicioCompletado(String idEjercicio) {
+    _ejerciciosCompletados.add(idEjercicio);
+  }
+
+  static int get totalContenidosCompletados => _contenidosCompletados
+      .where((id) => contenidos.any((c) => c.idContenido == id))
+      .length;
+
+  static int get totalContenidos => contenidos.length;
 }

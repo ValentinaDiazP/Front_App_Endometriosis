@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'biblioteca_screen.dart';
+import 'categorias_screen.dart';
 import 'ejercicios_screen.dart';
 import 'rutas_screen.dart';
 
 /// Pantalla contenedora del módulo Educativo.
 ///
-/// Arquitectura de navegación elegida: un TabBar interno con 3 pestañas
-/// (Biblioteca, Ejercicios, Rutas), en vez de 3 pantallas sueltas en el
-/// bottom nav principal de la app. Esto porque las 3 secciones comparten
-/// el mismo "tema" (contenido educativo) y una usuaria normalmente entra
-/// una vez al módulo y explora las tres cosas en la misma sesión.
+/// Arquitectura de navegación: un TabBar interno con 3 pestañas
+/// (Biblioteca, Ejercicios, Rutas), colgado del ítem "Educativo" del
+/// bottom navigation general de la app.
 ///
-/// Este contenedor es el que se cuelga del ítem "Educativo" del bottom
-/// navigation general de la app (junto a Comunidad, Seguimiento, etc.).
+/// La pestaña "Biblioteca" arranca en [CategoriasScreen] (la puerta de
+/// entrada por categorías) en vez de mostrar la lista de contenidos
+/// directamente; desde ahí se navega a la lista filtrada.
 class EducativoHomeScreen extends StatelessWidget {
   const EducativoHomeScreen({super.key});
 
@@ -24,6 +23,9 @@ class EducativoHomeScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Educativo'),
           bottom: const TabBar(
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
             tabs: [
               Tab(text: 'Biblioteca'),
               Tab(text: 'Ejercicios'),
@@ -33,7 +35,7 @@ class EducativoHomeScreen extends StatelessWidget {
         ),
         body: const TabBarView(
           children: [
-            BibliotecaScreen(),
+            CategoriasScreen(),
             EjerciciosScreen(),
             RutasScreen(),
           ],

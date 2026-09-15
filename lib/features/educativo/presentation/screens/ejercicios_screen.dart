@@ -2,12 +2,26 @@ import 'package:flutter/material.dart';
 import '../../data/mock_educativo_data.dart';
 import '../../models/ejercicio_psicoeducativo.dart';
 import '../../educativo_routes.dart';
+import '../widgets/aviso_pendiente_card.dart';
 
 /// Lista de ejercicios psicoeducativos, agrupados por enfoque
-/// (Psicoeducación / TCC / ACT y Mindfulness), tal como se construirán en
-/// los sprints Semana 4, 5 y 6 del cronograma.
-class EjerciciosScreen extends StatelessWidget {
+/// (Psicoeducación / TCC / ACT y Mindfulness).
+class EjerciciosScreen extends StatefulWidget {
   const EjerciciosScreen({super.key});
+
+  @override
+  State<EjerciciosScreen> createState() => _EjerciciosScreenState();
+}
+
+class _EjerciciosScreenState extends State<EjerciciosScreen> {
+  Future<void> _abrir(EjercicioPsicoeducativo ejercicio) async {
+    await Navigator.pushNamed(
+      context,
+      EducativoRoutes.ejercicioDetalle,
+      arguments: ejercicio,
+    );
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,34 +31,39 @@ class EjerciciosScreen extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: const EdgeInsets.only(bottom: 24),
       children: [
+        const AvisoPendienteCard(),
+        const SizedBox(height: 8),
         for (final tipo in porTipo.keys) ...[
           Padding(
-            padding: const EdgeInsets.only(bottom: 8, top: 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Text(tipo.label, style: Theme.of(context).textTheme.titleLarge),
           ),
-          ...porTipo[tipo]!.map(
-            (ejercicio) => Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: ejercicio.completadoPorUsuario
-                      ? Colors.green.shade100
-                      : const Color(0xFFF1EAFB),
-                  child: Icon(
-                    ejercicio.completadoPorUsuario ? Icons.check : Icons.self_improvement,
-                    color: ejercicio.completadoPorUsuario ? Colors.green : const Color(0xFF8E6BBF),
-                  ),
-                ),
-                title: Text(ejercicio.nombre),
-                subtitle: Text('${ejercicio.minutosEstimados} min · ${ejercicio.descripcion}'),
-                isThreeLine: true,
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  EducativoRoutes.ejercicioDetalle,
-                  arguments: ejercicio,
-                ),
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                for (final ejercicio in porTipo[tipo]!)
+                  Builder(builder: (context) {
+                    final completado = MockEducativoData.ejercicioCompletado(ejercicio.idEjercicio);
+                    return Card(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: completado ? Colors.green.shade100 : const Color(0xFFF1EAFB),
+                          child: Icon(
+                            completado ? Icons.check : Icons.self_improvement,
+                            color: completado ? Colors.green : const Color(0xFF8E6BBF),
+                          ),
+                        ),
+                        title: Text(ejercicio.nombre),
+                        subtitle: Text('${ejercicio.minutosEstimados} min · ${ejercicio.descripcion}'),
+                        isThreeLine: true,
+                        onTap: () => _abrir(ejercicio),
+                      ),
+                    );
+                  }),
+              ],
             ),
           ),
         ],

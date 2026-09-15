@@ -6,17 +6,24 @@ import '../../educativo_routes.dart';
 import '../widgets/categoria_chip.dart';
 import '../widgets/contenido_card.dart';
 
-/// Biblioteca básica de contenido (Semana 2 del cronograma).
-/// Aquí SOLO hay UI + datos mock: filtra en memoria, no llama a ningún API.
+/// Lista de contenidos de la biblioteca, con filtro por categoría.
+/// Se llega aquí desde [CategoriasScreen] (con una categoría ya elegida,
+/// o sin ninguna si la usuaria tocó "Ver todo").
+///
+/// Datos 100% mock: filtra en memoria, no llama a ningún API.
 class BibliotecaScreen extends StatefulWidget {
-  const BibliotecaScreen({super.key});
+  /// Id de la categoría con la que abrir la pantalla ya filtrada.
+  /// Null = mostrar todas.
+  final String? categoriaInicial;
+
+  const BibliotecaScreen({super.key, this.categoriaInicial});
 
   @override
   State<BibliotecaScreen> createState() => _BibliotecaScreenState();
 }
 
 class _BibliotecaScreenState extends State<BibliotecaScreen> {
-  String? _categoriaSeleccionada; // null = "Todas"
+  late String? _categoriaSeleccionada = widget.categoriaInicial;
 
   List<ContenidoEducativo> get _contenidosFiltrados {
     if (_categoriaSeleccionada == null) return MockEducativoData.contenidos;
@@ -25,9 +32,23 @@ class _BibliotecaScreenState extends State<BibliotecaScreen> {
         .toList();
   }
 
+  Future<void> _abrirDetalle(ContenidoEducativo contenido) async {
+    await Navigator.pushNamed(
+      context,
+      EducativoRoutes.contenidoDetalle,
+      arguments: contenido,
+    );
+    // Al volver, el estado de "completado" pudo haber cambiado dentro del
+    // detalle (ver ContenidoDetailScreen) — refrescamos para mostrarlo.
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
+    // Si se abrió desde "Ver todo" (sin Scaffold propio, dentro del tab),
+    // no duplicamos AppBar. Si se abrió con una categoría (push aparte),
+    // sí mostramos AppBar con back.
+    final contenido = Column(
       children: [
         const SizedBox(height: 12),
         _CategoriasBar(
@@ -41,19 +62,21 @@ class _BibliotecaScreenState extends State<BibliotecaScreen> {
             itemCount: _contenidosFiltrados.length,
             separatorBuilder: (_, __) => const SizedBox(height: 4),
             itemBuilder: (context, index) {
-              final contenido = _contenidosFiltrados[index];
+              final item = _contenidosFiltrados[index];
               return ContenidoCard(
-                contenido: contenido,
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  EducativoRoutes.contenidoDetalle,
-                  arguments: contenido,
-                ),
+                contenido: item,
+                completado: MockEducativoData.contenidoCompletado(item.idContenido),
+                onTap: () => _abrirDetalle(item),
               );
             },
           ),
         ),
       ],
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Biblioteca')),
+      body: contenido,
     );
   }
 }

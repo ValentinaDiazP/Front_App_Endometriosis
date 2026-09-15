@@ -1,15 +1,38 @@
 import 'package:flutter/material.dart';
+import '../../data/mock_educativo_data.dart';
 import '../../models/ejercicio_psicoeducativo.dart';
 
 /// Pantalla de instrucciones de un ejercicio. En sprints futuros esto se
 /// vuelve un flujo guiado paso a paso (según su tipo); por ahora es un
-/// wireframe estático con las instrucciones y un botón de completar.
-class EjercicioDetailScreen extends StatelessWidget {
+/// wireframe con las instrucciones y un botón de completar que sí guarda
+/// el estado en MockEducativoData.
+class EjercicioDetailScreen extends StatefulWidget {
   final EjercicioPsicoeducativo ejercicio;
   const EjercicioDetailScreen({super.key, required this.ejercicio});
 
   @override
+  State<EjercicioDetailScreen> createState() => _EjercicioDetailScreenState();
+}
+
+class _EjercicioDetailScreenState extends State<EjercicioDetailScreen> {
+  late bool _completado =
+      MockEducativoData.ejercicioCompletado(widget.ejercicio.idEjercicio);
+
+  void _completar() {
+    setState(() {
+      MockEducativoData.marcarEjercicioCompletado(widget.ejercicio.idEjercicio);
+      _completado = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Ejercicio completado')),
+    );
+    // TODO(backend): crear RegistroEjercicio con fecha, respuestas y
+    // percepción de utilidad, y sumar puntos de gamificación.
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final ejercicio = widget.ejercicio;
     return Scaffold(
       appBar: AppBar(title: Text(ejercicio.nombre)),
       body: Padding(
@@ -28,15 +51,8 @@ class EjercicioDetailScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                // TODO(backend): esto debe crear un RegistroEjercicio con
-                // fecha, respuestas y percepción de utilidad, y sumar
-                // puntos de gamificación (Gamificación III).
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Ejercicio completado (wireframe, sin backend aún)')),
-                  );
-                },
-                child: const Text('Completar ejercicio'),
+                onPressed: _completado ? null : _completar,
+                child: Text(_completado ? 'Ya completado' : 'Completar ejercicio'),
               ),
             ),
           ],

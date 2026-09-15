@@ -1,16 +1,34 @@
 import 'package:flutter/material.dart';
+import '../../data/mock_educativo_data.dart';
+import '../../models/contenido_educativo.dart';
 import '../../models/ruta_aprendizaje.dart';
 import '../../educativo_routes.dart';
 import '../widgets/contenido_card.dart';
 
 /// Detalle de una ruta: lista ordenada de contenidos que la componen.
-/// Reutiliza ContenidoCard para no duplicar UI con la Biblioteca.
-class RutaDetailScreen extends StatelessWidget {
+/// Reutiliza ContenidoCard (con su estado de completado real, tomado de
+/// MockEducativoData) para no duplicar UI con la Biblioteca.
+class RutaDetailScreen extends StatefulWidget {
   final RutaAprendizaje ruta;
   const RutaDetailScreen({super.key, required this.ruta});
 
   @override
+  State<RutaDetailScreen> createState() => _RutaDetailScreenState();
+}
+
+class _RutaDetailScreenState extends State<RutaDetailScreen> {
+  Future<void> _abrirContenido(ContenidoEducativo contenido) async {
+    await Navigator.pushNamed(
+      context,
+      EducativoRoutes.contenidoDetalle,
+      arguments: contenido,
+    );
+    setState(() {}); // refresca por si se marcó como completado
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final ruta = widget.ruta;
     return Scaffold(
       appBar: AppBar(title: Text(ruta.nombre)),
       body: ListView(
@@ -29,11 +47,8 @@ class RutaDetailScreen extends StatelessWidget {
             const SizedBox(height: 4),
             ContenidoCard(
               contenido: ruta.contenidos[i],
-              onTap: () => Navigator.pushNamed(
-                context,
-                EducativoRoutes.contenidoDetalle,
-                arguments: ruta.contenidos[i],
-              ),
+              completado: MockEducativoData.contenidoCompletado(ruta.contenidos[i].idContenido),
+              onTap: () => _abrirContenido(ruta.contenidos[i]),
             ),
             const SizedBox(height: 8),
           ],
