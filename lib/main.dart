@@ -6,7 +6,7 @@ import 'core/navigation/app_router.dart';
 import 'features/educativo/presentation/screens/educativo_home_screen.dart';
 import 'features/seguimiento/presentation/screens/informacion_personal_screen.dart';
 import 'features/seguimiento/models/informacion_personal.dart';
-import 'features/seguimiento/presentation/screens/registro_sintoma_screen.dart';
+import 'features/seguimiento/presentation/screens/seguimiento_home_screen.dart';
 
 void main() {
   runApp(const FlorecerApp());
@@ -512,9 +512,8 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
   late final List<Widget> _widgetOptions = <Widget>[
     const WellnessModule(), // Módulo Bienestar Actualizado
     const CommunityForumModule(), // Módulo Comunidad
-    RegistroSintomaScreen(
+    SeguimientoHomeScreen(
       informacionPersonal: widget.informacionPersonal,
-      onFinalizado: () => setState(() => _selectedIndex = 0),
     ), // Módulo Registro (Seguimiento)
     const ReportsModule(), // Módulo Reportes
     const EducativoHomeScreen(), // Módulo Educativo

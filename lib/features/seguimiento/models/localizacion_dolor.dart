@@ -13,6 +13,15 @@ class LocalizacionDolor {
     required this.nombre,
   });
 
+  /// IDs especiales reconocidos por RegistroSintomaScreen para aplicar
+  /// reglas particulares de selección: "Otro" habilita un campo de texto
+  /// libre, y "Ninguno" es mutuamente excluyente con cualquier otra zona.
+  static const String idOtro = 'loc_otro';
+  static const String idNinguno = 'loc_ninguno';
+
+  bool get esOtro => id == idOtro;
+  bool get esNinguno => id == idNinguno;
+
   factory LocalizacionDolor.fromJson(Map<String, dynamic> json) {
     return LocalizacionDolor(
       id: json['id'] as String,

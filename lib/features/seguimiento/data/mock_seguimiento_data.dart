@@ -17,6 +17,8 @@ class MockSeguimientoData {
     LocalizacionDolor(id: 'loc_3', nombre: 'Pelvis'),
     LocalizacionDolor(id: 'loc_4', nombre: 'Piernas'),
     LocalizacionDolor(id: 'loc_5', nombre: 'Cabeza'),
+    LocalizacionDolor(id: LocalizacionDolor.idOtro, nombre: 'Otro'),
+    LocalizacionDolor(id: LocalizacionDolor.idNinguno, nombre: 'Ninguno'),
   ];
 
   static const List<SintomaAsociado> sintomas = [
@@ -24,6 +26,5 @@ class MockSeguimientoData {
     SintomaAsociado(id: 'sint_2', nombre: 'Distensión abdominal'),
     SintomaAsociado(id: 'sint_3', nombre: 'Fatiga'),
     SintomaAsociado(id: 'sint_4', nombre: 'Mareo'),
-    SintomaAsociado(id: 'sint_5', nombre: 'Dolor de cabeza'),
   ];
 }

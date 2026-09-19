@@ -2,19 +2,23 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../models/localizacion_dolor.dart';
 
-/// Selector de zona corporal afectada por el dolor. A diferencia de
-/// `SintomaChip` (selección múltiple), aquí solo se puede elegir UNA
-/// localización a la vez, por eso usa `ChoiceChip` en lugar de `FilterChip`.
+/// Selector de zonas corporales afectadas por el dolor. Permite selección
+/// MÚLTIPLE (la usuaria puede tener dolor en varias zonas a la vez),
+/// incluyendo las opciones especiales "Otro" y "Ninguno". El comportamiento
+/// particular de esas dos opciones (mutuamente excluyentes entre sí y con
+/// el resto, campo de texto libre para "Otro") lo controla la pantalla que
+/// usa este widget, no el widget en sí — este solo dibuja los chips y
+/// avisa qué se tocó.
 class LocalizacionSelector extends StatelessWidget {
   final List<LocalizacionDolor> localizaciones;
-  final LocalizacionDolor? seleccionada;
-  final ValueChanged<LocalizacionDolor> onSelected;
+  final Set<LocalizacionDolor> seleccionadas;
+  final ValueChanged<LocalizacionDolor> onToggle;
 
   const LocalizacionSelector({
     super.key,
     required this.localizaciones,
-    required this.seleccionada,
-    required this.onSelected,
+    required this.seleccionadas,
+    required this.onToggle,
   });
 
   @override
@@ -31,11 +35,11 @@ class LocalizacionSelector extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: localizaciones.map((localizacion) {
-            final estaSeleccionada = seleccionada?.id == localizacion.id;
-            return ChoiceChip(
+            final estaSeleccionada = seleccionadas.contains(localizacion);
+            return FilterChip(
               label: Text(localizacion.nombre),
               selected: estaSeleccionada,
-              onSelected: (_) => onSelected(localizacion),
+              onSelected: (_) => onToggle(localizacion),
               backgroundColor: AppTheme.primaryLight,
               selectedColor: AppTheme.primary,
               labelStyle: TextStyle(

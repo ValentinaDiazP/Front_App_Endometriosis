@@ -8,21 +8,21 @@ import '../widgets/dolor_scale_slider.dart';
 import '../widgets/localizacion_selector.dart';
 import '../widgets/sintoma_chip.dart';
 
-/// Segunda pantalla del flujo de Seguimiento: registra intensidad de dolor,
-/// localización y síntomas asociados en un solo formulario con scroll.
+/// Segunda pantalla del flujo de Seguimiento: registra localización(es) del
+/// dolor, intensidad, síntomas asociados y observación en un formulario con
+/// scroll.
 ///
-/// Recibe `informacionPersonal` como parámetro del constructor (mismo
-/// patrón que usa Educativo en ContenidoDetailScreen/EjercicioDetailScreen),
-/// en vez de leerlo de `ModalRoute.of(context)`. Esto evita depender de que
-/// `AppRouter._page()` reenvíe los `RouteSettings` originales, y hace que
-/// el compilador garantice que este dato siempre esté disponible.
+/// La intensidad de dolor solo se habilita si hay al menos una zona real
+/// seleccionada (ver `_dolorHabilitado`) — no tiene sentido calificar un
+/// dolor que la usuaria no reportó. "Ninguno" es mutuamente excluyente con
+/// cualquier otra zona; "Otro" habilita un campo de texto libre.
 class RegistroSintomaScreen extends StatefulWidget {
   final InformacionPersonal informacionPersonal;
 
-  /// Callback opcional para cuando la usuaria elige "Volver al inicio".
-  /// Se usa en vez de Navigator.pop() porque, al vivir esta pantalla como
-  /// una pestaña dentro de MainNavigationHub (no como ruta empujada), no
-  /// siempre hay una pantalla anterior a la cual regresar.
+  /// Callback opcional para "Regresar". Se usa en vez de Navigator.pop()
+  /// porque, al vivir esta pantalla como una pestaña dentro de
+  /// MainNavigationHub (no como ruta empujada), no siempre hay una
+  /// pantalla anterior a la cual regresar.
   final VoidCallback? onFinalizado;
 
   const RegistroSintomaScreen({
@@ -37,14 +37,50 @@ class RegistroSintomaScreen extends StatefulWidget {
 
 class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
   int _intensidadDolor = 0;
-  LocalizacionDolor? _localizacionSeleccionada;
+  final Set<LocalizacionDolor> _localizacionesSeleccionadas = {};
   final Set<SintomaAsociado> _sintomasSeleccionados = {};
   final _observacionController = TextEditingController();
+  final _otroController = TextEditingController();
 
   @override
   void dispose() {
     _observacionController.dispose();
+    _otroController.dispose();
     super.dispose();
+  }
+
+  /// La intensidad de dolor solo aplica si hay al menos una zona real
+  /// seleccionada (una zona concreta u "Otro"); "Ninguno" no cuenta.
+  bool get _dolorHabilitado =>
+      _localizacionesSeleccionadas.any((l) => !l.esNinguno);
+
+  void _toggleLocalizacion(LocalizacionDolor localizacion) {
+    setState(() {
+      if (localizacion.esNinguno) {
+        if (_localizacionesSeleccionadas.contains(localizacion)) {
+          _localizacionesSeleccionadas.remove(localizacion);
+        } else {
+          // "Ninguno" reemplaza cualquier otra selección existente.
+          _localizacionesSeleccionadas
+            ..clear()
+            ..add(localizacion);
+          _otroController.clear();
+        }
+      } else {
+        // Elegir una zona real (o "Otro") descarta "Ninguno" automáticamente.
+        _localizacionesSeleccionadas.removeWhere((l) => l.esNinguno);
+        if (_localizacionesSeleccionadas.contains(localizacion)) {
+          _localizacionesSeleccionadas.remove(localizacion);
+          if (localizacion.esOtro) _otroController.clear();
+        } else {
+          _localizacionesSeleccionadas.add(localizacion);
+        }
+      }
+
+      if (!_dolorHabilitado) {
+        _intensidadDolor = 0;
+      }
+    });
   }
 
   void _toggleSintoma(SintomaAsociado sintoma, bool seleccionado) {
@@ -58,11 +94,19 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
   }
 
   void _guardarRegistro() {
-    if (_localizacionSeleccionada == null) {
+    if (_localizacionesSeleccionadas.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Selecciona la localización del dolor'),
+          content: Text('Selecciona al menos una localización (o "Ninguno")'),
         ),
+      );
+      return;
+    }
+
+    final incluyeOtro = _localizacionesSeleccionadas.any((l) => l.esOtro);
+    if (incluyeOtro && _otroController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Especifica la zona en "Otro"')),
       );
       return;
     }
@@ -73,7 +117,9 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
       usuarioId: widget.informacionPersonal.usuarioId,
       fechaHora: DateTime.now(),
       intensidadDolor: _intensidadDolor,
-      localizacion: _localizacionSeleccionada!,
+      localizaciones: _localizacionesSeleccionadas.toList(),
+      localizacionOtroDetalle:
+          incluyeOtro ? _otroController.text.trim() : null,
       sintomasAsociados: _sintomasSeleccionados.toList(),
       observacion: _observacionController.text.trim().isEmpty
           ? null
@@ -84,10 +130,13 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
     _mostrarConfirmacion(registro);
   }
 
-  /// Diálogo mostrado tras guardar un registro. Ofrece dos caminos: seguir
-  /// registrando (útil si la usuaria quiere anotar varios síntomas seguidos)
-  /// o volver a la pantalla anterior, en vez de dejarla "varada" aquí.
   void _mostrarConfirmacion(RegistroSintoma registro) {
+    final nombresLocalizaciones = registro.localizaciones
+        .map((l) => l.esOtro
+            ? (registro.localizacionOtroDetalle ?? 'Otro')
+            : l.nombre)
+        .join(', ');
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -95,8 +144,7 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
         return AlertDialog(
           title: const Text('¡Registro guardado!'),
           content: Text(
-            'Dolor ${registro.intensidadDolor}/10 en '
-            '${registro.localizacion.nombre}.',
+            'Dolor ${registro.intensidadDolor}/10 en $nombresLocalizaciones.',
           ),
           actions: [
             TextButton(
@@ -115,7 +163,7 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
                   Navigator.of(context).pop();
                 }
               },
-              child: const Text('Volver al inicio'),
+              child: const Text('Regresar'),
             ),
           ],
         );
@@ -123,24 +171,24 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
     );
   }
 
-  /// Limpia el formulario para permitir un nuevo registro sin salir de
-  /// la pantalla.
   void _reiniciarFormulario() {
     setState(() {
       _intensidadDolor = 0;
-      _localizacionSeleccionada = null;
+      _localizacionesSeleccionadas.clear();
       _sintomasSeleccionados.clear();
       _observacionController.clear();
+      _otroController.clear();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Registro de síntomas')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ListView(
+    final incluyeOtro =
+        _localizacionesSeleccionadas.any((l) => l.esOtro);
+
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: ListView(
           children: [
             Text(
               'Hola, ${widget.informacionPersonal.nombre}',
@@ -152,18 +200,27 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
-            DolorScaleSlider(
-              value: _intensidadDolor,
-              onChanged: (nuevoValor) {
-                setState(() => _intensidadDolor = nuevoValor);
-              },
-            ),
-            const SizedBox(height: 24),
             LocalizacionSelector(
               localizaciones: MockSeguimientoData.localizaciones,
-              seleccionada: _localizacionSeleccionada,
-              onSelected: (localizacion) {
-                setState(() => _localizacionSeleccionada = localizacion);
+              seleccionadas: _localizacionesSeleccionadas,
+              onToggle: _toggleLocalizacion,
+            ),
+            if (incluyeOtro) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _otroController,
+                decoration: const InputDecoration(
+                  labelText: 'Especifica la zona',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            DolorScaleSlider(
+              value: _intensidadDolor,
+              enabled: _dolorHabilitado,
+              onChanged: (nuevoValor) {
+                setState(() => _intensidadDolor = nuevoValor);
               },
             ),
             const SizedBox(height: 24),
@@ -203,7 +260,6 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
