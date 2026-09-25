@@ -7,7 +7,7 @@ import 'features/educativo/presentation/screens/educativo_home_screen.dart';
 import 'features/seguimiento/presentation/screens/informacion_personal_screen.dart';
 import 'features/seguimiento/models/informacion_personal.dart';
 import 'features/seguimiento/presentation/screens/seguimiento_home_screen.dart';
-
+import 'features/comunidad/presentation/screens/comunidad_feed_screen.dart'; // Ajusta la ruta exacta según tu estructura de carpetas
 void main() {
   runApp(const FlorecerApp());
 }
@@ -506,12 +506,9 @@ class MainNavigationHub extends StatefulWidget {
 class _MainNavigationHubState extends State<MainNavigationHub> {
   int _selectedIndex = 0;
 
-  // `late final` en vez de `static final`: ahora depende de
-  // `widget.informacionPersonal`, que solo existe una vez montado el
-  // widget, así que no puede calcularse en tiempo de compilación como antes.
   late final List<Widget> _widgetOptions = <Widget>[
-    const WellnessModule(), // Módulo Bienestar Actualizado
-    const CommunityForumModule(), // Módulo Comunidad
+    const WellnessModule(), // Módulo Bienestar
+    const ComunidadFeedScreen(), // Módulo Comunidad
     SeguimientoHomeScreen(
       informacionPersonal: widget.informacionPersonal,
     ), // Módulo Registro (Seguimiento)
@@ -528,8 +525,6 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // IndexedStack en vez de Center: mantiene vivas todas las pestañas
-      // (no se pierde el estado al cambiar de pestaña y volver).
       body: IndexedStack(
         index: _selectedIndex,
         children: _widgetOptions,
@@ -553,7 +548,6 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
     );
   }
 }
-
 // --- 5. MÓDULO BIENESTAR (ACTUALIZADO CON PESTAÑAS Y DJANGO) ---
 
 class WellnessModule extends StatelessWidget {
@@ -573,7 +567,7 @@ class WellnessModule extends StatelessWidget {
             tabs: [
               Tab(icon: Icon(Icons.storefront), text: 'Tienda'),
               Tab(icon: Icon(Icons.medical_services), text: 'Profesionales'),
-              Tab(icon: Icon(Icons.spa), text: 'Herramientas'),
+              Tab(icon: Icon(Icons.people), text: 'Comunidad'), // Se mantiene el nombre 'Comunidad'
             ],
           ),
         ),
@@ -581,7 +575,7 @@ class WellnessModule extends StatelessWidget {
           children: [
             StoreTab(),
             ProfessionalsTab(),
-            ToolsTab(),
+            ComunidadFeedScreen(), // Se carga la vista del feed de la comunidad
           ],
         ),
       ),

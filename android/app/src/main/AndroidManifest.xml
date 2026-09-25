@@ -2,6 +2,11 @@
     <!-- Permiso esencial para comunicarse con la API de Django -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Permisos para leer imágenes (compatibles con Android antiguo y Android 13+) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
     <application
         android:label="flutter_application"
         android:name="${applicationName}"
