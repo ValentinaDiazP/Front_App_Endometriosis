@@ -5,18 +5,13 @@ import '../../seguimiento_routes.dart';
 /// Primera pantalla del flujo de Seguimiento: captura los datos personales
 /// básicos (nombre, fecha de nacimiento, fecha de diagnóstico) antes de
 /// pasar al registro de síntomas.
-///
-/// Es `StatefulWidget` porque maneja el estado del formulario (controlador
-/// de texto y fechas seleccionadas) mientras la usuaria lo diligencia.
 class InformacionPersonalScreen extends StatefulWidget {
-  /// Callback opcional ejecutado al presionar "Continuar", con los datos
-  /// ya validados. Si es null, se usa el comportamiento por defecto
-  /// (navegar a SeguimientoRoutes.registroSintoma). Se usa un callback en
-  /// vez de una navegación fija para que esta pantalla se pueda reutilizar
-  /// desde fuera del módulo (por ejemplo, desde el flujo de onboarding en
-  /// main.dart) sin que este archivo tenga que importar pantallas ajenas
-  /// al módulo de Seguimiento.
-  final void Function(BuildContext context, InformacionPersonal informacionPersonal)?
+  /// Callback ejecutado al presionar "Continuar". Devuelve un `Future`
+  /// porque, cuando se usa desde el onboarding real, aquí es donde se
+  /// hace la llamada HTTP de registro contra el backend — esta pantalla
+  /// espera esa respuesta para mostrar un error si falla (por ejemplo,
+  /// "usuario ya existe"), en vez de avanzar a ciegas.
+  final Future<void> Function(BuildContext context, InformacionPersonal informacionPersonal)?
       onContinuar;
 
   const InformacionPersonalScreen({super.key, this.onContinuar});
@@ -33,6 +28,7 @@ class _InformacionPersonalScreenState
 
   DateTime? _fechaNacimiento;
   DateTime? _fechaDiagnostico;
+  bool _enviando = false;
 
   @override
   void dispose() {
@@ -64,7 +60,7 @@ class _InformacionPersonalScreenState
         '${fecha.year}';
   }
 
-  void _continuar() {
+  Future<void> _continuar() async {
     if (!_formKey.currentState!.validate()) return;
     if (_fechaNacimiento == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -74,7 +70,8 @@ class _InformacionPersonalScreenState
     }
 
     final informacionPersonal = InformacionPersonal(
-      // TODO(backend): reemplazar por el id real de la usuaria autenticada.
+      // Se reemplaza por el id real que devuelva el backend tras
+      // registrar exitosamente (ver DiagnosisScreen._navigateToNext).
       usuarioId: 'usuario_demo',
       nombre: _nombreController.text.trim(),
       fechaNacimiento: _fechaNacimiento!,
@@ -82,7 +79,18 @@ class _InformacionPersonalScreenState
     );
 
     if (widget.onContinuar != null) {
-      widget.onContinuar!(context,informacionPersonal);
+      setState(() => _enviando = true);
+      try {
+        await widget.onContinuar!(context, informacionPersonal);
+      } catch (e) {
+        if (!mounted) return;
+        final mensaje = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(mensaje)),
+        );
+      } finally {
+        if (mounted) setState(() => _enviando = false);
+      }
     } else {
       Navigator.pushNamed(
         context,
@@ -114,6 +122,7 @@ class _InformacionPersonalScreenState
               const SizedBox(height: 24),
               TextFormField(
                 controller: _nombreController,
+                enabled: !_enviando,
                 decoration: const InputDecoration(
                   labelText: 'Nombre completo',
                   border: OutlineInputBorder(),
@@ -129,33 +138,46 @@ class _InformacionPersonalScreenState
               _CampoFecha(
                 etiqueta: 'Fecha de nacimiento',
                 valor: _formatearFecha(_fechaNacimiento),
-                onTap: () => _seleccionarFecha(
-                  context: context,
-                  fechaActual: _fechaNacimiento,
-                  onFechaSeleccionada: (fecha) {
-                    setState(() => _fechaNacimiento = fecha);
-                  },
-                ),
+                onTap: _enviando
+                    ? null
+                    : () => _seleccionarFecha(
+                          context: context,
+                          fechaActual: _fechaNacimiento,
+                          onFechaSeleccionada: (fecha) {
+                            setState(() => _fechaNacimiento = fecha);
+                          },
+                        ),
               ),
               const SizedBox(height: 20),
               _CampoFecha(
                 etiqueta: 'Fecha de diagnóstico (opcional)',
                 valor: _formatearFecha(_fechaDiagnostico),
-                onTap: () => _seleccionarFecha(
-                  context: context,
-                  fechaActual: _fechaDiagnostico,
-                  onFechaSeleccionada: (fecha) {
-                    setState(() => _fechaDiagnostico = fecha);
-                  },
-                ),
+                onTap: _enviando
+                    ? null
+                    : () => _seleccionarFecha(
+                          context: context,
+                          fechaActual: _fechaDiagnostico,
+                          onFechaSeleccionada: (fecha) {
+                            setState(() => _fechaDiagnostico = fecha);
+                          },
+                        ),
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: _continuar,
+                onPressed: _enviando ? null : _continuar,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: const Text('Continuar'),
+                child: _enviando
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Continuar'),
               ),
             ],
           ),
@@ -165,13 +187,11 @@ class _InformacionPersonalScreenState
   }
 }
 
-/// Campo de solo lectura que abre un selector de fecha al tocarlo. Se
-/// extrae como widget privado porque se repite dos veces en esta pantalla
-/// (fecha de nacimiento y fecha de diagnóstico) con el mismo comportamiento.
+/// Campo de solo lectura que abre un selector de fecha al tocarlo.
 class _CampoFecha extends StatelessWidget {
   final String etiqueta;
   final String valor;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _CampoFecha({
     required this.etiqueta,

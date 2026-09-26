@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_seguimiento_data.dart';
+import '../../../../core/services/sintomas_service.dart';
 import '../../models/informacion_personal.dart';
 import '../../models/localizacion_dolor.dart';
 import '../../models/registro_sintoma.dart';
@@ -8,26 +8,24 @@ import '../widgets/dolor_scale_slider.dart';
 import '../widgets/localizacion_selector.dart';
 import '../widgets/sintoma_chip.dart';
 
-/// Segunda pantalla del flujo de Seguimiento: registra localización(es) del
-/// dolor, intensidad, síntomas asociados y observación en un formulario con
-/// scroll.
+/// Segunda pestaña de Seguimiento: registra localización(es) del dolor,
+/// intensidad, síntomas asociados y observación, contra la API real.
 ///
-/// La intensidad de dolor solo se habilita si hay al menos una zona real
-/// seleccionada (ver `_dolorHabilitado`) — no tiene sentido calificar un
-/// dolor que la usuaria no reportó. "Ninguno" es mutuamente excluyente con
-/// cualquier otra zona; "Otro" habilita un campo de texto libre.
+/// Los catálogos (localizaciones, síntomas) ya no vienen de mock — se
+/// cargan desde el backend al abrir la pantalla. "Otro" y "Ninguno" siguen
+/// siendo un truco del frontend (no existen en la base de datos), así que
+/// se agregan a mano después de traer el catálogo real.
 class RegistroSintomaScreen extends StatefulWidget {
   final InformacionPersonal informacionPersonal;
+  final String token;
 
-  /// Callback opcional para "Regresar". Se usa en vez de Navigator.pop()
-  /// porque, al vivir esta pantalla como una pestaña dentro de
-  /// MainNavigationHub (no como ruta empujada), no siempre hay una
-  /// pantalla anterior a la cual regresar.
+  /// Callback opcional para "Regresar" (ver seguimiento_home_screen.dart).
   final VoidCallback? onFinalizado;
 
   const RegistroSintomaScreen({
     super.key,
     required this.informacionPersonal,
+    required this.token,
     this.onFinalizado,
   });
 
@@ -42,6 +40,46 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
   final _observacionController = TextEditingController();
   final _otroController = TextEditingController();
 
+  List<LocalizacionDolor> _localizacionesCatalogo = [];
+  List<SintomaAsociado> _sintomasCatalogo = [];
+  bool _cargando = true;
+  String? _errorCarga;
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarCatalogos();
+  }
+
+  Future<void> _cargarCatalogos() async {
+    setState(() {
+      _cargando = true;
+      _errorCarga = null;
+    });
+    try {
+      final localizaciones =
+          await SintomasService.obtenerLocalizaciones(widget.token);
+      final sintomas = await SintomasService.obtenerSintomas(widget.token);
+      if (!mounted) return;
+      setState(() {
+        _localizacionesCatalogo = [
+          ...localizaciones,
+          const LocalizacionDolor(id: LocalizacionDolor.idOtro, nombre: 'Otro'),
+          const LocalizacionDolor(id: LocalizacionDolor.idNinguno, nombre: 'Ninguno'),
+        ];
+        _sintomasCatalogo = sintomas;
+        _cargando = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorCarga = e.toString().replaceFirst('Exception: ', '');
+        _cargando = false;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _observacionController.dispose();
@@ -49,8 +87,6 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
     super.dispose();
   }
 
-  /// La intensidad de dolor solo aplica si hay al menos una zona real
-  /// seleccionada (una zona concreta u "Otro"); "Ninguno" no cuenta.
   bool get _dolorHabilitado =>
       _localizacionesSeleccionadas.any((l) => !l.esNinguno);
 
@@ -60,14 +96,12 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
         if (_localizacionesSeleccionadas.contains(localizacion)) {
           _localizacionesSeleccionadas.remove(localizacion);
         } else {
-          // "Ninguno" reemplaza cualquier otra selección existente.
           _localizacionesSeleccionadas
             ..clear()
             ..add(localizacion);
           _otroController.clear();
         }
       } else {
-        // Elegir una zona real (o "Otro") descarta "Ninguno" automáticamente.
         _localizacionesSeleccionadas.removeWhere((l) => l.esNinguno);
         if (_localizacionesSeleccionadas.contains(localizacion)) {
           _localizacionesSeleccionadas.remove(localizacion);
@@ -93,7 +127,7 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
     });
   }
 
-  void _guardarRegistro() {
+  Future<void> _guardarRegistro() async {
     if (_localizacionesSeleccionadas.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -112,8 +146,7 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
     }
 
     final registro = RegistroSintoma(
-      // TODO(backend): generar el id real al persistir en el servidor.
-      id: 'registro_demo',
+      id: 'pendiente', // el id real lo asigna el backend al guardar
       usuarioId: widget.informacionPersonal.usuarioId,
       fechaHora: DateTime.now(),
       intensidadDolor: _intensidadDolor,
@@ -126,8 +159,18 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
           : _observacionController.text.trim(),
     );
 
-    // TODO(backend): enviar `registro` a la API en vez de solo mostrarlo.
-    _mostrarConfirmacion(registro);
+    setState(() => _guardando = true);
+    try {
+      await SintomasService.guardarRegistro(token: widget.token, registro: registro);
+      if (!mounted) return;
+      _mostrarConfirmacion(registro);
+    } catch (e) {
+      if (!mounted) return;
+      final mensaje = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   void _mostrarConfirmacion(RegistroSintoma registro) {
@@ -183,83 +226,111 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final incluyeOtro =
-        _localizacionesSeleccionadas.any((l) => l.esOtro);
+    if (_cargando) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorCarga != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_errorCarga!, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _cargarCatalogos,
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final incluyeOtro = _localizacionesSeleccionadas.any((l) => l.esOtro);
 
     return Padding(
       padding: const EdgeInsets.all(20),
       child: ListView(
-          children: [
-            Text(
-              'Hola, ${widget.informacionPersonal.nombre}',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '¿Cómo te sientes hoy?',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            LocalizacionSelector(
-              localizaciones: MockSeguimientoData.localizaciones,
-              seleccionadas: _localizacionesSeleccionadas,
-              onToggle: _toggleLocalizacion,
-            ),
-            if (incluyeOtro) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: _otroController,
-                decoration: const InputDecoration(
-                  labelText: 'Especifica la zona',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-            DolorScaleSlider(
-              value: _intensidadDolor,
-              enabled: _dolorHabilitado,
-              onChanged: (nuevoValor) {
-                setState(() => _intensidadDolor = nuevoValor);
-              },
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Síntomas asociados',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: MockSeguimientoData.sintomas.map((sintoma) {
-                return SintomaChip(
-                  sintoma: sintoma,
-                  seleccionado: _sintomasSeleccionados.contains(sintoma),
-                  onSelected: (seleccionado) =>
-                      _toggleSintoma(sintoma, seleccionado),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
+        children: [
+          Text(
+            'Hola, ${widget.informacionPersonal.nombre}',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '¿Cómo te sientes hoy?',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 24),
+          LocalizacionSelector(
+            localizaciones: _localizacionesCatalogo,
+            seleccionadas: _localizacionesSeleccionadas,
+            onToggle: _toggleLocalizacion,
+          ),
+          if (incluyeOtro) ...[
+            const SizedBox(height: 12),
             TextField(
-              controller: _observacionController,
+              controller: _otroController,
               decoration: const InputDecoration(
-                labelText: 'Observación (opcional)',
+                labelText: 'Especifica la zona',
                 border: OutlineInputBorder(),
               ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _guardarRegistro,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Guardar registro'),
             ),
           ],
-        ),
-      );
+          const SizedBox(height: 24),
+          DolorScaleSlider(
+            value: _intensidadDolor,
+            enabled: _dolorHabilitado,
+            onChanged: (nuevoValor) {
+              setState(() => _intensidadDolor = nuevoValor);
+            },
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Síntomas asociados',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _sintomasCatalogo.map((sintoma) {
+              return SintomaChip(
+                sintoma: sintoma,
+                seleccionado: _sintomasSeleccionados.contains(sintoma),
+                onSelected: (seleccionado) =>
+                    _toggleSintoma(sintoma, seleccionado),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _observacionController,
+            decoration: const InputDecoration(
+              labelText: 'Observación (opcional)',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: _guardando ? null : _guardarRegistro,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            child: _guardando
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Guardar registro'),
+          ),
+        ],
+      ),
+    );
   }
 }

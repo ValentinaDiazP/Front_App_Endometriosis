@@ -3,15 +3,15 @@ import '../../models/informacion_personal.dart';
 import 'registro_ciclo_screen.dart';
 import 'registro_sintoma_screen.dart';
 
-/// Pantalla contenedora del módulo de Seguimiento, con pestañas internas
-/// (Síntomas, Ciclo). Mismo patrón que EducativoHomeScreen. Los colores del
-/// TabBar se fijan explícitamente (blanco/blanco translúcido) porque el
-/// tema global de la app no estiliza TabBar de forma confiable (main.dart
-/// usa su propia paleta AppColors, no el AppTheme de core/theme).
 class SeguimientoHomeScreen extends StatelessWidget {
   final InformacionPersonal informacionPersonal;
+  final String token;
 
-  const SeguimientoHomeScreen({super.key, required this.informacionPersonal});
+  const SeguimientoHomeScreen({
+    super.key,
+    required this.informacionPersonal,
+    required this.token,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,10 @@ class SeguimientoHomeScreen extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            RegistroSintomaScreen(informacionPersonal: informacionPersonal),
+            RegistroSintomaScreen(
+              informacionPersonal: informacionPersonal,
+              token: token,
+            ),
             RegistroCicloScreen(informacionPersonal: informacionPersonal),
           ],
         ),

@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'core/navigation/app_router.dart';
 import 'features/educativo/presentation/screens/educativo_home_screen.dart';
-import 'features/seguimiento/presentation/screens/informacion_personal_screen.dart';
+import 'core/services/auth_service.dart';
 import 'features/seguimiento/models/informacion_personal.dart';
 import 'features/seguimiento/presentation/screens/seguimiento_home_screen.dart';
 import 'features/comunidad/presentation/screens/comunidad_feed_screen.dart'; // Ajusta la ruta exacta según tu estructura de carpetas
@@ -80,20 +80,76 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _ingresando = false;
 
-  void _handleLogin() {
-    if (_userController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const DiagnosisScreen()),
-      );
-    } else {
+  Future<void> _handleLogin() async {
+    final username = _userController.text.trim();
+    final password = _passwordController.text;
+    if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Ingresa usuario y contraseña para continuar.'),
           backgroundColor: AppColors.danger,
         ),
       );
+      return;
     }
+
+    setState(() => _ingresando = true);
+    try {
+      final loginExitoso = await AuthService.login(username: username, password: password);
+      final perfil = await AuthService.obtenerPerfil(loginExitoso.token);
+
+      final informacionPersonal = InformacionPersonal(
+        usuarioId: perfil.usuarioId.toString(),
+        nombre: perfil.nombre,
+        fechaNacimiento: perfil.fechaNacimiento,
+        fechaDiagnostico: perfil.fechaDiagnostico,
+      );
+
+      if (!mounted) return;
+
+      if (perfil.onboardingCompletado) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => MainNavigationHub(
+              informacionPersonal: informacionPersonal,
+              token: loginExitoso.token,
+            ),
+          ),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => DiagnosisScreen(
+              informacionPersonal: informacionPersonal,
+              token: loginExitoso.token,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final mensaje = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensaje), backgroundColor: AppColors.danger),
+      );
+    } finally {
+      if (mounted) setState(() => _ingresando = false);
+    }
+  }
+
+  void _irARegistro() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const RegistroScreen()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _userController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -112,11 +168,7 @@ class _AuthScreenState extends State<AuthScreen> {
               const Text(
                 'Bienvenida a Florecer',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -127,6 +179,7 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 40),
               TextField(
                 controller: _userController,
+                enabled: !_ingresando,
                 decoration: InputDecoration(
                   labelText: 'Usuario',
                   hintText: 'Ingresa tu nombre de usuario',
@@ -138,6 +191,7 @@ class _AuthScreenState extends State<AuthScreen> {
               TextField(
                 controller: _passwordController,
                 obscureText: true,
+                enabled: !_ingresando,
                 decoration: InputDecoration(
                   labelText: 'Contraseña',
                   hintText: 'Ingresa tu contraseña',
@@ -147,15 +201,211 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: 40),
               ElevatedButton(
-                onPressed: _handleLogin,
+                onPressed: _ingresando ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondary,
                   foregroundColor: AppColors.textLight,
                 ),
-                child: const Text(
-                  'Ingresar',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                child: _ingresando
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Ingresar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _ingresando ? null : _irARegistro,
+                child: const Text('¿No tienes cuenta? Regístrate'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Registro de una nueva usuaria. Al terminar, guarda la cuenta en el
+/// backend y regresa a AuthScreen para que inicie sesión normalmente
+/// (no entra directo a la app).
+class RegistroScreen extends StatefulWidget {
+  const RegistroScreen({super.key});
+
+  @override
+  State<RegistroScreen> createState() => _RegistroScreenState();
+}
+
+class _RegistroScreenState extends State<RegistroScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _nombreController = TextEditingController();
+  final _diagnosticoController = TextEditingController();
+
+  DateTime? _fechaNacimiento;
+  DateTime? _fechaDiagnostico;
+  bool _enviando = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _nombreController.dispose();
+    _diagnosticoController.dispose();
+    super.dispose();
+  }
+
+  String _formatearFecha(DateTime? fecha) {
+    if (fecha == null) return 'Seleccionar fecha';
+    return '${fecha.day.toString().padLeft(2, '0')}/'
+        '${fecha.month.toString().padLeft(2, '0')}/${fecha.year}';
+  }
+
+  Future<void> _seleccionarFecha({
+    required DateTime? fechaActual,
+    required ValueChanged<DateTime> onFechaSeleccionada,
+  }) async {
+    final ahora = DateTime.now();
+    final fecha = await showDatePicker(
+      context: context,
+      initialDate: fechaActual ?? DateTime(ahora.year - 20),
+      firstDate: DateTime(1930),
+      lastDate: ahora,
+    );
+    if (fecha != null) onFechaSeleccionada(fecha);
+  }
+
+  Future<void> _registrar() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_fechaNacimiento == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecciona tu fecha de nacimiento')),
+      );
+      return;
+    }
+
+    setState(() => _enviando = true);
+    try {
+      await AuthService.registrar(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+        nombre: _nombreController.text.trim(),
+        fechaNacimiento: _fechaNacimiento!,
+        diagnostico: _diagnosticoController.text,
+        fechaDiagnostico: _fechaDiagnostico,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('¡Cuenta creada! Ya puedes iniciar sesión.')),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      final mensaje = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensaje), backgroundColor: AppColors.danger),
+      );
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Crear cuenta')),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _nombreController,
+                enabled: !_enviando,
+                decoration: const InputDecoration(labelText: 'Nombre completo', border: OutlineInputBorder()),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Ingresa tu nombre' : null,
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _enviando
+                    ? null
+                    : () => _seleccionarFecha(
+                          fechaActual: _fechaNacimiento,
+                          onFechaSeleccionada: (f) => setState(() => _fechaNacimiento = f),
+                        ),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Fecha de nacimiento',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: const Icon(Icons.calendar_today),
+                  ),
+                  child: Text(_formatearFecha(_fechaNacimiento)),
                 ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _diagnosticoController,
+                enabled: !_enviando,
+                decoration: const InputDecoration(
+                  labelText: 'Diagnóstico (opcional)',
+                  hintText: 'Ej: Endometriosis',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _enviando
+                    ? null
+                    : () => _seleccionarFecha(
+                          fechaActual: _fechaDiagnostico,
+                          onFechaSeleccionada: (f) => setState(() => _fechaDiagnostico = f),
+                        ),
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Fecha de diagnóstico (opcional)',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: const Icon(Icons.calendar_today),
+                  ),
+                  child: Text(_formatearFecha(_fechaDiagnostico)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _usernameController,
+                enabled: !_enviando,
+                decoration: const InputDecoration(labelText: 'Nombre de usuario', border: OutlineInputBorder()),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Elige un usuario' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: true,
+                enabled: !_enviando,
+                decoration: const InputDecoration(
+                  labelText: 'Contraseña (mínimo 6 caracteres)',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Crea una contraseña';
+                  if (v.length < 6) return 'Debe tener al menos 6 caracteres';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _enviando ? null : _registrar,
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                child: _enviando
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Crear cuenta'),
               ),
             ],
           ),
@@ -168,38 +418,40 @@ class _AuthScreenState extends State<AuthScreen> {
 // --- 2. MÓDULO DE DIAGNÓSTICO ---
 
 class DiagnosisScreen extends StatelessWidget {
-  const DiagnosisScreen({super.key});
+  final InformacionPersonal informacionPersonal;
+  final String token;
 
-  void _navigateToNext(BuildContext context, String diagnosis) {
-      // Antes de ir al cuestionario o al hub principal, se captura la
-      // información personal una sola vez (ver InformacionPersonalScreen,
-      // reutilizada aquí desde el módulo de Seguimiento).
+  const DiagnosisScreen({
+    super.key,
+    required this.informacionPersonal,
+    required this.token,
+  });
+
+  Future<void> _navigateToNext(BuildContext context, String diagnosis) async {
+    if (diagnosis == 'Endometriosis') {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => InformacionPersonalScreen(
-            onContinuar: (nuevoContext, informacionPersonal) {
-              if (diagnosis == 'Endometriosis') {
-                Navigator.of(nuevoContext).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (_) => QuestionnaireScreen(
-                      informacionPersonal: informacionPersonal,
-                    ),
-                  ),
-                );
-              } else {
-                Navigator.of(nuevoContext).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (_) => MainNavigationHub(
-                      informacionPersonal: informacionPersonal,
-                    ),
-                  ),
-                );
-              }
-            },
+          builder: (_) => QuestionnaireScreen(
+            informacionPersonal: informacionPersonal,
+            token: token,
+          ),
+        ),
+      );
+    } else {
+      // Se salta el cuestionario, pero igual marca el onboarding como
+      // completo para no repetir ni siquiera esta pantalla la próxima vez.
+      await AuthService.completarOnboarding(token);
+      if (!context.mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => MainNavigationHub(
+            informacionPersonal: informacionPersonal,
+            token: token,
           ),
         ),
       );
     }
+  }
 
   Widget _buildDiagnosisCard(BuildContext context, String title, IconData icon) {
     return Card(
@@ -218,8 +470,7 @@ class DiagnosisScreen extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark),
               ),
             ],
           ),
@@ -269,6 +520,7 @@ class DiagnosisScreen extends StatelessWidget {
   }
 }
 
+
 class SafetyNoticeCard extends StatelessWidget {
   const SafetyNoticeCard({super.key});
 
@@ -305,8 +557,13 @@ class SafetyNoticeCard extends StatelessWidget {
 
 class QuestionnaireScreen extends StatefulWidget {
   final InformacionPersonal informacionPersonal;
+  final String token;
 
-  const QuestionnaireScreen({super.key, required this.informacionPersonal});
+  const QuestionnaireScreen({
+    super.key,
+    required this.informacionPersonal,
+    required this.token,
+  });
 
   @override
   State<QuestionnaireScreen> createState() => _QuestionnaireScreenState();
@@ -335,18 +592,22 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
     super.dispose();
   }
 
-  void _nextPage() {
+    Future<void> _nextPage() async {
     if (_currentPage < 3) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeIn,
       );
     } else {
-      // Al finalizar el cuestionario, se navega al hub principal
+      // Termina el cuestionario por primera vez: se marca el onboarding
+      // como completo para que el próximo login vaya directo al menú.
+      await AuthService.completarOnboarding(widget.token);
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => MainNavigationHub(
             informacionPersonal: widget.informacionPersonal,
+            token: widget.token,
           ),
         ),
       );
@@ -496,8 +757,13 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
 
 class MainNavigationHub extends StatefulWidget {
   final InformacionPersonal informacionPersonal;
+  final String token;
 
-  const MainNavigationHub({super.key, required this.informacionPersonal});
+  const MainNavigationHub({
+    super.key,
+    required this.informacionPersonal,
+    required this.token,
+  });
 
   @override
   State<MainNavigationHub> createState() => _MainNavigationHubState();
@@ -511,6 +777,7 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
     const ComunidadFeedScreen(), // Módulo Comunidad
     SeguimientoHomeScreen(
       informacionPersonal: widget.informacionPersonal,
+      token: widget.token,
     ), // Módulo Registro (Seguimiento)
     const ReportsModule(), // Módulo Reportes
     const EducativoHomeScreen(), // Módulo Educativo
