@@ -447,6 +447,7 @@ class DiagnosisScreen extends StatelessWidget {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (preferenciasContext) => PreferenciasScreen(
+            token: token,
             onFinalizar: () => Navigator.of(preferenciasContext).pushReplacement(
               MaterialPageRoute(
                 builder: (_) => MainNavigationHub(
@@ -615,6 +616,7 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (preferenciasContext) => PreferenciasScreen(
+            token: widget.token,
             onFinalizar: () => Navigator.of(preferenciasContext).pushReplacement(
               MaterialPageRoute(
                 builder: (_) => MainNavigationHub(
@@ -795,7 +797,7 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
       token: widget.token,
     ), // Módulo Registro (Seguimiento)
     const ReportsModule(), // Módulo Reportes
-    const EducativoHomeScreen(), // Módulo Educativo
+    EducativoHomeScreen(token: widget.token), // Módulo Educativo
   ];
 
   void _onItemTapped(int index) {

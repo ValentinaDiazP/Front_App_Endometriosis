@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_educativo_data.dart';
+import '../../data/educativo_repository.dart';
 import '../../models/categoria_contenido.dart';
 import '../../models/contenido_educativo.dart';
 import '../../educativo_routes.dart';
@@ -26,8 +26,8 @@ class _BibliotecaScreenState extends State<BibliotecaScreen> {
   late String? _categoriaSeleccionada = widget.categoriaInicial;
 
   List<ContenidoEducativo> get _contenidosFiltrados {
-    if (_categoriaSeleccionada == null) return MockEducativoData.contenidos;
-    return MockEducativoData.contenidos
+    if (_categoriaSeleccionada == null) return EducativoRepository.contenidos;
+    return EducativoRepository.contenidos
         .where((c) => c.idCategoriaFK == _categoriaSeleccionada)
         .toList();
   }
@@ -65,7 +65,7 @@ class _BibliotecaScreenState extends State<BibliotecaScreen> {
               final item = _contenidosFiltrados[index];
               return ContenidoCard(
                 contenido: item,
-                completado: MockEducativoData.contenidoCompletado(item.idContenido),
+                completado: EducativoRepository.contenidoCompletado(item.idContenido),
                 onTap: () => _abrirDetalle(item),
               );
             },
@@ -89,7 +89,7 @@ class _CategoriasBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categorias = MockEducativoData.categorias;
+    final categorias = EducativoRepository.categorias;
     return SizedBox(
       height: 40,
       child: ListView(

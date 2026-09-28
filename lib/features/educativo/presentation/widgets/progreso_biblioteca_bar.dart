@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_educativo_data.dart';
+import '../../data/educativo_repository.dart';
 import '../../../../core/theme/app_theme.dart';
 
 /// Resumen de progreso de la Biblioteca: "X de Y contenidos completados".
@@ -10,8 +10,8 @@ class ProgresoBibliotecaBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completados = MockEducativoData.totalContenidosCompletados;
-    final total = MockEducativoData.totalContenidos;
+    final completados = EducativoRepository.totalContenidosCompletados;
+    final total = EducativoRepository.totalContenidos;
     final progreso = total == 0 ? 0.0 : completados / total;
 
     return Padding(

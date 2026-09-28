@@ -18,7 +18,7 @@ extension TipoEjercicioLabel on TipoEjercicio {
 /// Espejo del frontend de la tabla `EjercicioPsicoeducativo`.
 ///
 /// El estado de completado NO vive aquí: se consulta en vivo con
-/// MockEducativoData.ejercicioCompletado(idEjercicio), igual que con los
+/// EducativoRepository.ejercicioCompletado(idEjercicio), igual que con los
 /// contenidos de la biblioteca.
 class EjercicioPsicoeducativo {
   final String idEjercicio;

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_educativo_data.dart';
+import '../../data/educativo_repository.dart';
 import '../../models/ejercicio_psicoeducativo.dart';
 
 /// Pantalla de instrucciones de un ejercicio. En sprints futuros esto se
-/// vuelve un flujo guiado paso a paso (según su tipo); por ahora es un
-/// wireframe con las instrucciones y un botón de completar que sí guarda
-/// el estado en MockEducativoData.
+/// vuelve un flujo guiado paso a paso (según su tipo); por ahora muestra
+/// las instrucciones y un botón de completar que crea un RegistroEjercicio
+/// en el backend (vía EducativoRepository).
 class EjercicioDetailScreen extends StatefulWidget {
   final EjercicioPsicoeducativo ejercicio;
   const EjercicioDetailScreen({super.key, required this.ejercicio});
@@ -16,18 +16,28 @@ class EjercicioDetailScreen extends StatefulWidget {
 
 class _EjercicioDetailScreenState extends State<EjercicioDetailScreen> {
   late bool _completado =
-      MockEducativoData.ejercicioCompletado(widget.ejercicio.idEjercicio);
+      EducativoRepository.ejercicioCompletado(widget.ejercicio.idEjercicio);
+  bool _guardando = false;
 
-  void _completar() {
-    setState(() {
-      MockEducativoData.marcarEjercicioCompletado(widget.ejercicio.idEjercicio);
-      _completado = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ejercicio completado')),
-    );
-    // TODO(backend): crear RegistroEjercicio con fecha, respuestas y
-    // percepción de utilidad, y sumar puntos de gamificación.
+  Future<void> _completar() async {
+    setState(() => _guardando = true);
+    try {
+      // TODO: pedir respuestas y percepción de utilidad (el backend ya los
+      // acepta como opcionales) y sumar puntos de gamificación.
+      await EducativoRepository.marcarEjercicioCompletado(widget.ejercicio.idEjercicio);
+      if (!mounted) return;
+      setState(() => _completado = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ejercicio completado')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo guardar el ejercicio. Intenta de nuevo.')),
+      );
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   @override
@@ -51,7 +61,7 @@ class _EjercicioDetailScreenState extends State<EjercicioDetailScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _completado ? null : _completar,
+                onPressed: _completado || _guardando ? null : _completar,
                 child: Text(_completado ? 'Ya completado' : 'Completar ejercicio'),
               ),
             ),

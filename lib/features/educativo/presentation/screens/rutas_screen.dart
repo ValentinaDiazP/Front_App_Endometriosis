@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_educativo_data.dart';
+import '../../data/educativo_repository.dart';
 import '../../educativo_routes.dart';
 
 /// Rutas de aprendizaje: secuencias curadas de contenidos de la biblioteca.
@@ -12,7 +12,7 @@ class RutasScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rutas = MockEducativoData.rutas;
+    final rutas = EducativoRepository.rutas;
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       itemCount: rutas.length,

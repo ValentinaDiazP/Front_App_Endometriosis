@@ -7,7 +7,7 @@ import 'contenido_educativo.dart';
 /// dentro de la ruta; aquí simplemente se respeta el orden de la lista).
 ///
 /// El progreso de cada contenido NO se guarda aquí: se consulta en vivo a
-/// MockEducativoData.contenidoCompletado(id), para que sea la misma fuente
+/// EducativoRepository.contenidoCompletado(id), para que sea la misma fuente
 /// de verdad que usa la Biblioteca (ver ProgresoBibliotecaBar).
 class RutaAprendizaje {
   final String idRuta;

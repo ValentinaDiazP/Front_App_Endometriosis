@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/carga_educativo.dart';
 import 'categorias_screen.dart';
 import 'para_ti_screen.dart';
 import 'ejercicios_screen.dart';
@@ -13,8 +14,13 @@ import 'rutas_screen.dart';
 /// La pestaña "Biblioteca" arranca en [CategoriasScreen] (la puerta de
 /// entrada por categorías) en vez de mostrar la lista de contenidos
 /// directamente; desde ahí se navega a la lista filtrada.
+///
+/// [token] es el de la usuaria que inició sesión: con él se cargan desde
+/// Django el catálogo, sus preferencias y su progreso.
 class EducativoHomeScreen extends StatelessWidget {
-  const EducativoHomeScreen({super.key});
+  final String? token;
+
+  const EducativoHomeScreen({super.key, this.token});
 
   @override
   Widget build(BuildContext context) {
@@ -35,13 +41,16 @@ class EducativoHomeScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            ParaTiScreen(),
-            CategoriasScreen(),
-            EjerciciosScreen(),
-            RutasScreen(),
-          ],
+        body: CargaEducativo(
+          token: token,
+          builder: (_) => const TabBarView(
+            children: [
+              ParaTiScreen(),
+              CategoriasScreen(),
+              EjerciciosScreen(),
+              RutasScreen(),
+            ],
+          ),
         ),
       ),
     );
