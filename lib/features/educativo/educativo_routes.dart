@@ -13,4 +13,9 @@ class EducativoRoutes {
   static const ejercicioDetalle = '/educativo/ejercicios/detalle';
   static const rutas = '/educativo/rutas';
   static const rutaDetalle = '/educativo/rutas/detalle';
+
+  /// Solo para la demo aislada del wireframe: simula el paso de preferencias
+  /// del onboarding y, al terminar, entra a [home]. En la app real, este
+  /// paso lo llama el flujo de onboarding del equipo (ver PreferenciasScreen).
+  static const onboardingPreferencias = '/educativo/onboarding-preferencias';
 }
