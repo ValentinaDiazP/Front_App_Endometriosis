@@ -1,10 +1,36 @@
+class Comentario {
+  final int id;
+  final String? usuarioNombre;
+  final String texto;
+  final String fechaCreacion;
+
+  Comentario({
+    required this.id,
+    this.usuarioNombre,
+    required this.texto,
+    required this.fechaCreacion,
+  });
+
+  factory Comentario.fromJson(Map<String, dynamic> json) {
+    return Comentario(
+      id: json['id'],
+      usuarioNombre: json['usuario_nombre'],
+      texto: json['texto'] ?? '',
+      fechaCreacion: json['fecha_creacion'] ?? '',
+    );
+  }
+}
+
 class Publicacion {
   final int id;
   final String usuarioNombre;
   final String contenido;
   final String? imagenUrl;
   final String fechaCreacion;
-  final int comentariosCount;
+  final int totalLikes;
+  final bool meGusta;
+  final int totalComentarios;
+  final List<Comentario> comentarios;
 
   Publicacion({
     required this.id,
@@ -12,17 +38,25 @@ class Publicacion {
     required this.contenido,
     this.imagenUrl,
     required this.fechaCreacion,
-    required this.comentariosCount,
+    required this.totalLikes,
+    required this.meGusta,
+    required this.totalComentarios,
+    required this.comentarios,
   });
 
   factory Publicacion.fromJson(Map<String, dynamic> json) {
     return Publicacion(
-      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-      usuarioNombre: (json['usuario_nombre'] as String?) ?? 'Anónima',
-      contenido: (json['contenido'] as String?) ?? '',
-      imagenUrl: json['imagen'] as String?,
-      fechaCreacion: (json['fecha_creacion'] as String?) ?? '',
-      comentariosCount: (json['comentarios_count'] as int?) ?? 0,
+      id: json['id'],
+      usuarioNombre: json['usuario_nombre'] ?? 'Anónima',
+      contenido: json['contenido'] ?? '',
+      imagenUrl: json['imagen'],
+      fechaCreacion: json['fecha_creacion'] ?? '',
+      totalLikes: json['total_likes'] ?? 0,
+      meGusta: json['me_gusta'] ?? false,
+      totalComentarios: json['total_comentarios'] ?? 0,
+      comentarios: (json['comentarios'] as List? ?? [])
+          .map((c) => Comentario.fromJson(c as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
