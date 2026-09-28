@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'core/navigation/app_router.dart';
 import 'features/educativo/presentation/screens/educativo_home_screen.dart';
+import 'features/educativo/presentation/screens/preferencias_screen.dart';
 import 'core/services/auth_service.dart';
 import 'features/seguimiento/models/informacion_personal.dart';
 import 'features/seguimiento/presentation/screens/seguimiento_home_screen.dart';
@@ -442,11 +443,18 @@ class DiagnosisScreen extends StatelessWidget {
       // completo para no repetir ni siquiera esta pantalla la próxima vez.
       await AuthService.completarOnboarding(token);
       if (!context.mounted) return;
+      // Paso de preferencias del módulo Educativo antes de entrar al menú.
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => MainNavigationHub(
-            informacionPersonal: informacionPersonal,
-            token: token,
+          builder: (preferenciasContext) => PreferenciasScreen(
+            onFinalizar: () => Navigator.of(preferenciasContext).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => MainNavigationHub(
+                  informacionPersonal: informacionPersonal,
+                  token: token,
+                ),
+              ),
+            ),
           ),
         ),
       );
@@ -603,11 +611,18 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       // como completo para que el próximo login vaya directo al menú.
       await AuthService.completarOnboarding(widget.token);
       if (!mounted) return;
+      // Paso de preferencias del módulo Educativo antes de entrar al menú.
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => MainNavigationHub(
-            informacionPersonal: widget.informacionPersonal,
-            token: widget.token,
+          builder: (preferenciasContext) => PreferenciasScreen(
+            onFinalizar: () => Navigator.of(preferenciasContext).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => MainNavigationHub(
+                  informacionPersonal: widget.informacionPersonal,
+                  token: widget.token,
+                ),
+              ),
+            ),
           ),
         ),
       );

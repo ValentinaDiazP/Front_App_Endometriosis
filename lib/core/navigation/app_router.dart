@@ -7,6 +7,7 @@ import '../../features/educativo/presentation/screens/educativo_home_screen.dart
 import '../../features/educativo/presentation/screens/contenido_detail_screen.dart';
 import '../../features/educativo/presentation/screens/ejercicio_detail_screen.dart';
 import '../../features/educativo/presentation/screens/ruta_detail_screen.dart';
+import '../../features/educativo/presentation/screens/preferencias_screen.dart';
 
 /// Router centralizado por `onGenerateRoute`. Es deliberadamente simple
 /// (sin paquetes externos como go_router) para que sea fácil de fusionar con
@@ -32,7 +33,17 @@ class AppRouter {
       case EducativoRoutes.rutaDetalle:
         final ruta = settings.arguments as RutaAprendizaje;
         return _page(RutaDetailScreen(ruta: ruta));
-        
+
+      case EducativoRoutes.onboardingPreferencias:
+        return _page(
+          Builder(
+            builder: (context) => PreferenciasScreen(
+              onFinalizar: () =>
+                  Navigator.pushReplacementNamed(context, EducativoRoutes.home),
+            ),
+          ),
+        );
+
       default:
         return _page(
           Scaffold(

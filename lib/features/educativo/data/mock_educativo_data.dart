@@ -161,4 +161,31 @@ class MockEducativoData {
       .length;
 
   static int get totalContenidos => contenidos.length;
+
+  // ---------------------------------------------------------------------
+  // Preferencias de la usuaria (mock, en memoria). Equivale a la tabla
+  // `PreferenciaUsuario` del diagrama ER (idUsuario + idCategoria). Se llena
+  // en la pantalla de preferencias del onboarding (PreferenciasScreen).
+  // Cuando exista backend: POST/GET /api/educativo/preferencias/.
+  // ---------------------------------------------------------------------
+
+  static final Set<String> _categoriasPreferidas = {};
+
+  static Set<String> get categoriasPreferidas =>
+      Set<String>.of(_categoriasPreferidas);
+
+  static bool get tienePreferencias => _categoriasPreferidas.isNotEmpty;
+
+  static void guardarPreferencias(Set<String> idsCategorias) {
+    _categoriasPreferidas
+      ..clear()
+      ..addAll(idsCategorias);
+  }
+
+  static CategoriaContenido? categoriaPorId(String id) {
+    for (final c in categorias) {
+      if (c.idCategoria == id) return c;
+    }
+    return null;
+  }
 }

@@ -7,11 +7,16 @@ class ContenidoCard extends StatelessWidget {
   final bool completado;
   final VoidCallback onTap;
 
+  /// Motivo por el que se recomienda este contenido (personalización).
+  /// Si es null no se muestra nada.
+  final String? motivo;
+
   const ContenidoCard({
     super.key,
     required this.contenido,
     required this.onTap,
     this.completado = false,
+    this.motivo,
   });
 
   IconData get _icono {
@@ -64,6 +69,25 @@ class ContenidoCard extends StatelessWidget {
                           ),
                       ],
                     ),
+                    if (motivo != null) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(Icons.auto_awesome, size: 13, color: Color(0xFF8E6BBF)),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              motivo!,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                color: Color(0xFF8E6BBF),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       contenido.resumen,
