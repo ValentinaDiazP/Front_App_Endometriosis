@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_educativo_data.dart';
+import '../../data/educativo_repository.dart';
 import '../../models/contenido_educativo.dart';
 import '../widgets/nivel_badge.dart';
 
 /// Detalle de un ítem de la biblioteca. Recibe el [ContenidoEducativo] ya
-/// cargado por argumento de navegación (no vuelve a pedirlo a ningún API,
-/// porque en esta etapa no hay backend conectado).
+/// cargado por argumento de navegación (no vuelve a pedirlo al API).
 ///
-/// El estado "completado" vive en [MockEducativoData] (in-memory): al
-/// marcarlo aquí, se refleja también en la tarjeta de Biblioteca y en la
-/// barra de progreso al volver.
+/// El estado "completado" se guarda en el backend a través de
+/// [EducativoRepository]: al marcarlo aquí, se refleja también en la
+/// tarjeta de Biblioteca y en la barra de progreso al volver.
 class ContenidoDetailScreen extends StatefulWidget {
   final ContenidoEducativo contenido;
   const ContenidoDetailScreen({super.key, required this.contenido});
@@ -20,18 +19,28 @@ class ContenidoDetailScreen extends StatefulWidget {
 
 class _ContenidoDetailScreenState extends State<ContenidoDetailScreen> {
   late bool _completado =
-      MockEducativoData.contenidoCompletado(widget.contenido.idContenido);
+      EducativoRepository.contenidoCompletado(widget.contenido.idContenido);
+  bool _guardando = false;
 
-  void _marcarComoLeido() {
-    setState(() {
-      MockEducativoData.marcarContenidoCompletado(widget.contenido.idContenido);
-      _completado = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Marcado como leído')),
-    );
-    // TODO(backend): esto debe crear una InteraccionContenido
-    // (completado = true) y sumar puntos de gamificación.
+  Future<void> _marcarComoLeido() async {
+    setState(() => _guardando = true);
+    try {
+      // Crea la InteraccionContenido (completado = true) en el backend.
+      // TODO(backend): sumar puntos de gamificación.
+      await EducativoRepository.marcarContenidoCompletado(widget.contenido.idContenido);
+      if (!mounted) return;
+      setState(() => _completado = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Marcado como leído')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo guardar tu progreso. Intenta de nuevo.')),
+      );
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   @override
@@ -87,7 +96,7 @@ class _ContenidoDetailScreenState extends State<ContenidoDetailScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: _completado ? null : _marcarComoLeido,
+                onPressed: _completado || _guardando ? null : _marcarComoLeido,
                 icon: Icon(_completado ? Icons.check_circle : Icons.check_circle_outline),
                 label: Text(_completado ? 'Ya completado' : 'Marcar como leído'),
               ),

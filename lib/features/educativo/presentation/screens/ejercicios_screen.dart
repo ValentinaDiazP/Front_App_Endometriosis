@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_educativo_data.dart';
+import '../../data/educativo_repository.dart';
 import '../../models/ejercicio_psicoeducativo.dart';
 import '../../educativo_routes.dart';
 import '../widgets/aviso_pendiente_card.dart';
@@ -26,7 +26,7 @@ class _EjerciciosScreenState extends State<EjerciciosScreen> {
   @override
   Widget build(BuildContext context) {
     final porTipo = <TipoEjercicio, List<EjercicioPsicoeducativo>>{};
-    for (final ej in MockEducativoData.ejercicios) {
+    for (final ej in EducativoRepository.ejercicios) {
       porTipo.putIfAbsent(ej.tipo, () => []).add(ej);
     }
 
@@ -46,7 +46,7 @@ class _EjerciciosScreenState extends State<EjerciciosScreen> {
               children: [
                 for (final ejercicio in porTipo[tipo]!)
                   Builder(builder: (context) {
-                    final completado = MockEducativoData.ejercicioCompletado(ejercicio.idEjercicio);
+                    final completado = EducativoRepository.ejercicioCompletado(ejercicio.idEjercicio);
                     return Card(
                       child: ListTile(
                         leading: CircleAvatar(

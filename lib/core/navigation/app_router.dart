@@ -38,6 +38,7 @@ class AppRouter {
         return _page(
           Builder(
             builder: (context) => PreferenciasScreen(
+              token: settings.arguments as String?,
               onFinalizar: () =>
                   Navigator.pushReplacementNamed(context, EducativoRoutes.home),
             ),

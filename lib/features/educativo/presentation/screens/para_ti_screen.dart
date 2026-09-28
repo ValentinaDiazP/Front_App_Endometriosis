@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/gestor_contenido.dart';
-import '../../data/mock_educativo_data.dart';
+import '../../data/educativo_repository.dart';
 import '../../data/senales_seguimiento_mock.dart';
 import '../../educativo_routes.dart';
 import '../../models/contenido_educativo.dart';
@@ -48,7 +48,7 @@ class _ParaTiScreenState extends State<ParaTiScreen> {
     final priorizados = GestorContenidoEducativo.contenidosPriorizados(
       soloPreferidos: _soloMisIntereses,
     );
-    final tienePreferencias = MockEducativoData.tienePreferencias;
+    final tienePreferencias = EducativoRepository.tienePreferencias;
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
@@ -101,7 +101,7 @@ class _ParaTiScreenState extends State<ParaTiScreen> {
                   ContenidoCard(
                     contenido: item.contenido,
                     motivo: item.motivo,
-                    completado: MockEducativoData.contenidoCompletado(
+                    completado: EducativoRepository.contenidoCompletado(
                         item.contenido.idContenido),
                     onTap: () => _abrirDetalle(item.contenido),
                   ),

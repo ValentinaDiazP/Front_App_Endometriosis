@@ -7,8 +7,8 @@ enum NivelContenido { basico, intermedio, avanzado }
 /// Espejo del frontend de la tabla `ContenidoEducativo`.
 ///
 /// idCategoriaFK referencia a [CategoriaContenido.idCategoria].
-/// Cuando exista backend, este objeto se llenará desde el endpoint
-/// GET /api/educativo/contenidos/ en lugar de datos mock.
+/// Se llena desde el endpoint GET /api/educativo/contenidos/ (ver
+/// EducativoService).
 class ContenidoEducativo {
   final String idContenido;
   final String idCategoriaFK;

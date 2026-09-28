@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_educativo_data.dart';
+import '../../data/educativo_repository.dart';
 import '../../models/contenido_educativo.dart';
 import '../../models/ruta_aprendizaje.dart';
 import '../../educativo_routes.dart';
@@ -7,7 +7,7 @@ import '../widgets/contenido_card.dart';
 
 /// Detalle de una ruta: lista ordenada de contenidos que la componen.
 /// Reutiliza ContenidoCard (con su estado de completado real, tomado de
-/// MockEducativoData) para no duplicar UI con la Biblioteca.
+/// EducativoRepository) para no duplicar UI con la Biblioteca.
 class RutaDetailScreen extends StatefulWidget {
   final RutaAprendizaje ruta;
   const RutaDetailScreen({super.key, required this.ruta});
@@ -47,7 +47,7 @@ class _RutaDetailScreenState extends State<RutaDetailScreen> {
             const SizedBox(height: 4),
             ContenidoCard(
               contenido: ruta.contenidos[i],
-              completado: MockEducativoData.contenidoCompletado(ruta.contenidos[i].idContenido),
+              completado: EducativoRepository.contenidoCompletado(ruta.contenidos[i].idContenido),
               onTap: () => _abrirContenido(ruta.contenidos[i]),
             ),
             const SizedBox(height: 8),

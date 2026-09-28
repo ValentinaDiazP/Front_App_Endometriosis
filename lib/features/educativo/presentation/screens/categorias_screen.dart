@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_educativo_data.dart';
+import '../../data/educativo_repository.dart';
 import '../../models/categoria_contenido.dart';
 import '../widgets/aviso_pendiente_card.dart';
 import '../widgets/progreso_biblioteca_bar.dart';
@@ -30,7 +30,7 @@ class CategoriasScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
-              for (final categoria in MockEducativoData.categorias)
+              for (final categoria in EducativoRepository.categorias)
                 _CategoriaCard(
                   categoria: categoria,
                   onTap: () => Navigator.push(
@@ -62,8 +62,8 @@ class _CategoriaCard extends StatelessWidget {
   const _CategoriaCard({required this.categoria, required this.onTap});
 
   int get _cantidadContenidos {
-    if (categoria == null) return MockEducativoData.contenidos.length;
-    return MockEducativoData.contenidos
+    if (categoria == null) return EducativoRepository.contenidos.length;
+    return EducativoRepository.contenidos
         .where((c) => c.idCategoriaFK == categoria!.idCategoria)
         .length;
   }

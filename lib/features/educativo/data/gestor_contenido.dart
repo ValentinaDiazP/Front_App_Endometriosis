@@ -1,6 +1,6 @@
 import '../models/contenido_educativo.dart';
 import '../models/ejercicio_psicoeducativo.dart';
-import 'mock_educativo_data.dart';
+import 'educativo_repository.dart';
 import 'senales_seguimiento_mock.dart';
 
 /// Resultado de la recomendación: qué actividad pendiente mostrarle a la
@@ -38,11 +38,10 @@ class ContenidoPriorizado {
 /// por hacer" dentro del módulo Educativo, para poder mostrárselo como un
 /// aviso/recordatorio (p. ej. "Tienes pendiente terminar...").
 ///
-/// Hoy decide en base a los datos mock (el primer contenido/ejercicio sin
-/// completar). Cuando exista backend, la misma interfaz (un solo método
-/// `siguientePendiente()`) se puede reimplementar consultando las señales
-/// reales de InteraccionContenido / RegistroEjercicio y la personalización
-/// definida en PreferenciaUsuario, sin tener que cambiar la UI que lo usa.
+/// Decide con los datos que EducativoRepository trae del backend (el primer
+/// contenido/ejercicio sin completar según InteraccionContenido y
+/// RegistroEjercicio). Las señales de seguimiento (dolor, ánimo) aún son
+/// mock: ver SenalesSeguimientoMock.
 class GestorContenidoEducativo {
   GestorContenidoEducativo._();
 
@@ -51,8 +50,8 @@ class GestorContenidoEducativo {
   /// disponibles.
   static RecomendacionPendiente? siguientePendiente() {
     final ContenidoEducativo? contenidoPendiente =
-        MockEducativoData.contenidos.cast<ContenidoEducativo?>().firstWhere(
-              (c) => !MockEducativoData.contenidoCompletado(c!.idContenido),
+        EducativoRepository.contenidos.cast<ContenidoEducativo?>().firstWhere(
+              (c) => !EducativoRepository.contenidoCompletado(c!.idContenido),
               orElse: () => null,
             );
 
@@ -64,11 +63,11 @@ class GestorContenidoEducativo {
       );
     }
 
-    final EjercicioPsicoeducativo? ejercicioPendiente = MockEducativoData
+    final EjercicioPsicoeducativo? ejercicioPendiente = EducativoRepository
         .ejercicios
         .cast<EjercicioPsicoeducativo?>()
         .firstWhere(
-          (e) => !MockEducativoData.ejercicioCompletado(e!.idEjercicio),
+          (e) => !EducativoRepository.ejercicioCompletado(e!.idEjercicio),
           orElse: () => null,
         );
 
@@ -100,9 +99,9 @@ class GestorContenidoEducativo {
   static List<ContenidoPriorizado> contenidosPriorizados({
     bool soloPreferidos = false,
   }) {
-    final preferidas = MockEducativoData.categoriasPreferidas;
+    final preferidas = EducativoRepository.categoriasPreferidas;
 
-    var lista = MockEducativoData.contenidos.toList();
+    var lista = EducativoRepository.contenidos.toList();
     if (soloPreferidos && preferidas.isNotEmpty) {
       lista = lista.where((c) => preferidas.contains(c.idCategoriaFK)).toList();
     }
@@ -113,7 +112,7 @@ class GestorContenidoEducativo {
 
       if (preferidas.contains(c.idCategoriaFK)) {
         puntaje += 3;
-        final categoria = MockEducativoData.categoriaPorId(c.idCategoriaFK);
+        final categoria = EducativoRepository.categoriaPorId(c.idCategoriaFK);
         motivos.add('Porque te interesa ${categoria?.nombre ?? 'este tema'}');
       }
       if (SenalesSeguimientoMock.dolorAlto && c.idCategoriaFK == 'cat_dolor') {
@@ -125,7 +124,7 @@ class GestorContenidoEducativo {
         puntaje += 2;
         motivos.add('Tu ánimo ha estado bajo esta semana');
       }
-      if (MockEducativoData.contenidoCompletado(c.idContenido)) {
+      if (EducativoRepository.contenidoCompletado(c.idContenido)) {
         puntaje -= 5;
       }
 
