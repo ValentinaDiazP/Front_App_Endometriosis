@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/educativo_repository.dart';
 import '../../models/contenido_educativo.dart';
+import '../widgets/boton_recurso_externo.dart';
 import '../widgets/nivel_badge.dart';
 
 /// Detalle de un ítem de la biblioteca. Recibe el [ContenidoEducativo] ya
@@ -88,9 +89,17 @@ class _ContenidoDetailScreenState extends State<ContenidoDetailScreen> {
             const SizedBox(height: 16),
             Text(contenido.resumen, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
-            // Placeholder: aquí luego irá el reproductor de audio/video o el
-            // cuerpo de texto ya formateado (markdown/rich text), según
-            // contenido.tipo. Por ahora solo se muestra como texto plano.
+            // Si el contenido tiene un video o podcast externo, se abre en
+            // su app (YouTube, Spotify…). El enlace se carga desde el admin.
+            if (contenido.urlRecurso != null) ...[
+              BotonRecursoExterno(
+                url: contenido.urlRecurso!,
+                esAudio: contenido.tipo == TipoContenido.audio,
+              ),
+              const SizedBox(height: 16),
+            ],
+            // Por ahora el cuerpo se muestra como texto plano (más adelante
+            // podría ir formateado con markdown/rich text).
             Text(contenido.cuerpo),
             const SizedBox(height: 24),
             SizedBox(

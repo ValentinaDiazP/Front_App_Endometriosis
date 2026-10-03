@@ -118,12 +118,23 @@ class EducativoService {
     }
   }
 
-  static Future<void> registrarEjercicio(String token, String idEjercicio) async {
+  /// [respuestas] y [utilidad] (1 a 5) son opcionales: los ejercicios
+  /// interactivos (TCC, ACT/Mindfulness) los envían; los demás no.
+  static Future<void> registrarEjercicio(
+    String token,
+    String idEjercicio, {
+    String? respuestas,
+    int? utilidad,
+  }) async {
     final response = await http
         .post(
           Uri.parse('$_baseUrl/registros-ejercicio/'),
           headers: _headers(token),
-          body: jsonEncode({'ejercicio': idEjercicio}),
+          body: jsonEncode({
+            'ejercicio': idEjercicio,
+            if (respuestas != null) 'respuestas': respuestas,
+            if (utilidad != null) 'utilidad': utilidad,
+          }),
         )
         .timeout(const Duration(seconds: 15));
     if (response.statusCode != 201) {
@@ -135,6 +146,12 @@ class EducativoService {
   // JSON -> modelos. Los valores de `tipo` y `nivel` que manda Django son
   // exactamente los nombres de los enums de Dart.
   // ---------------------------------------------------------------------
+
+  /// Django manda "" cuando no hay enlace; en Dart se representa con null.
+  static String? _url(dynamic valor) {
+    final texto = (valor as String?)?.trim() ?? '';
+    return texto.isEmpty ? null : texto;
+  }
 
   static CategoriaContenido _categoria(dynamic j) => CategoriaContenido(
         idCategoria: j['id'] as String,
@@ -153,6 +170,7 @@ class EducativoService {
         resumen: j['resumen'] as String,
         cuerpo: j['cuerpo'] as String,
         minutosEstimados: j['minutos_estimados'] as int,
+        urlRecurso: _url(j['url_recurso']),
       );
 
   static EjercicioPsicoeducativo _ejercicio(dynamic j) => EjercicioPsicoeducativo(
@@ -162,6 +180,7 @@ class EducativoService {
         descripcion: j['descripcion'] as String,
         instrucciones: j['instrucciones'] as String,
         minutosEstimados: j['minutos_estimados'] as int,
+        urlRecurso: _url(j['url_recurso']),
       );
 
   static RutaAprendizaje _ruta(dynamic j) => RutaAprendizaje(

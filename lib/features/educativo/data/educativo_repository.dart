@@ -44,6 +44,7 @@ class EducativoRepository {
       if (_cargaEnCurso != null) return _cargaEnCurso!;
     }
 
+    if (tokenEfectivo != _token) _pasosAlcanzadosModulo.clear();
     _token = tokenEfectivo;
     _datos = null;
     final carga = _cargar(tokenEfectivo);
@@ -102,9 +103,34 @@ class EducativoRepository {
   static bool ejercicioCompletado(String idEjercicio) =>
       _ejerciciosCompletados.contains(idEjercicio);
 
-  static Future<void> marcarEjercicioCompletado(String idEjercicio) async {
-    await EducativoService.registrarEjercicio(_tokenActual, idEjercicio);
+  static Future<void> marcarEjercicioCompletado(
+    String idEjercicio, {
+    String? respuestas,
+    int? utilidad,
+  }) async {
+    await EducativoService.registrarEjercicio(
+      _tokenActual,
+      idEjercicio,
+      respuestas: respuestas,
+      utilidad: utilidad,
+    );
     _ejerciciosCompletados.add(idEjercicio);
+  }
+
+  // Progreso parcial de módulos guiados: cuántos pasos ha alcanzado la
+  // usuaria en cada ejercicio de psicoeducación. NOTA: el modelo de datos
+  // actual (RegistroEjercicio) solo guarda ejercicios COMPLETADOS; guardar
+  // el avance parcial requeriría un campo o tabla nueva. Hoy vive en memoria
+  // y se borra al cambiar de usuaria.
+  static final Map<String, int> _pasosAlcanzadosModulo = {};
+
+  static int pasosAlcanzadosModulo(String idEjercicio) =>
+      _pasosAlcanzadosModulo[idEjercicio] ?? 0;
+
+  static void guardarPasosAlcanzadosModulo(String idEjercicio, int pasos) {
+    if (pasos > pasosAlcanzadosModulo(idEjercicio)) {
+      _pasosAlcanzadosModulo[idEjercicio] = pasos;
+    }
   }
 
   static int get totalContenidosCompletados => _contenidosCompletados
