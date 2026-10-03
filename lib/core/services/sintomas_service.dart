@@ -5,7 +5,8 @@ import '../../features/seguimiento/models/localizacion_dolor.dart';
 import '../../features/seguimiento/models/registro_sintoma.dart';
 import '../../features/seguimiento/models/sintoma_asociado.dart';
 import '../../features/seguimiento/models/registro_emocional.dart';
-
+import '../../features/seguimiento/models/progreso_gamificacion.dart';
+import '../../features/seguimiento/models/registro_ciclo.dart';
 /// Cliente HTTP para /api/sintomas/ (catálogos y registros de síntomas).
 class SintomasService {
   SintomasService._();
@@ -119,5 +120,93 @@ class SintomasService {
       throw Exception('No se pudo guardar el check-in.');
     }
     return RegistroEmocional.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+    static Future<ProgresoGamificacion> obtenerProgreso(String token) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/gamificacion/'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('No se pudo cargar tu progreso.');
+    }
+    return ProgresoGamificacion.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
+  }
+
+    static String _fechaApi(DateTime fecha) =>
+      fecha.toIso8601String().split('T').first;
+
+  static Map<String, dynamic> _cuerpoCiclo(
+    DateTime inicio,
+    DateTime? fin,
+    AbundanciaSangrado abundancia,
+  ) =>
+      {
+        'fecha_inicio': _fechaApi(inicio),
+        // null explícito: así editar un ciclo permite borrar la fecha de fin.
+        'fecha_fin': fin == null ? null : _fechaApi(fin),
+        'abundancia': abundancia.name,
+      };
+
+  static Future<List<RegistroCiclo>> obtenerCiclos(String token) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/registros-ciclo/'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('No se pudieron cargar tus ciclos.');
+    }
+    final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+    return lista
+        .map((e) => RegistroCiclo.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  static Future<void> crearCiclo({
+    required String token,
+    required DateTime inicio,
+    DateTime? fin,
+    required AbundanciaSangrado abundancia,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/registros-ciclo/'),
+      headers: _headers(token),
+      body: jsonEncode(_cuerpoCiclo(inicio, fin, abundancia)),
+    );
+    if (response.statusCode != 201) {
+      throw Exception('No se pudo guardar el ciclo. Intenta de nuevo.');
+    }
+  }
+
+  static Future<void> actualizarCiclo({
+    required String token,
+    required String id,
+    required DateTime inicio,
+    DateTime? fin,
+    required AbundanciaSangrado abundancia,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$_baseUrl/registros-ciclo/$id/'),
+      headers: _headers(token),
+      body: jsonEncode(_cuerpoCiclo(inicio, fin, abundancia)),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('No se pudo actualizar el ciclo. Intenta de nuevo.');
+    }
+  }
+
+  static Future<void> eliminarCiclo({
+    required String token,
+    required String id,
+  }) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/registros-ciclo/$id/'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 204) {
+      throw Exception('No se pudo eliminar el ciclo. Intenta de nuevo.');
+    }
   }
 }

@@ -1,41 +1,69 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_ciclo_data.dart';
-import '../../models/informacion_personal.dart';
+import '../../../../core/services/sintomas_service.dart';
 import '../../models/registro_ciclo.dart';
 import '../widgets/abundancia_selector.dart';
 import '../widgets/calendario_menstrual.dart';
 
-/// Registro de ciclo y sangrado: calendario menstrual, formulario de nuevo
-/// ciclo (o edición de uno existente), y lista de ciclos ya registrados con
-/// opciones de editar/eliminar. Mantiene su propia lista en memoria
-/// (sembrada con MockCicloData) porque todavía no hay backend conectado.
+/// Registro de ciclo y sangrado contra la API real: calendario, formulario
+/// de nuevo ciclo (o edición de uno existente) y lista de ciclos guardados
+/// con opciones de editar y eliminar.
 class RegistroCicloScreen extends StatefulWidget {
-  final InformacionPersonal informacionPersonal;
+  final String token;
 
-  const RegistroCicloScreen({super.key, required this.informacionPersonal});
+  const RegistroCicloScreen({super.key, required this.token});
 
   @override
   State<RegistroCicloScreen> createState() => _RegistroCicloScreenState();
 }
 
 class _RegistroCicloScreenState extends State<RegistroCicloScreen> {
-  late List<RegistroCiclo> _registros;
+  List<RegistroCiclo> _registros = [];
+  bool _cargando = true;
+  String? _errorCarga;
+  bool _guardando = false;
   DateTime _mesEnfocado = DateTime.now();
 
   DateTime? _fechaInicio;
   DateTime? _fechaFin;
   AbundanciaSangrado? _abundancia;
 
-  /// Id del registro en edición, o null si el formulario está creando uno
-  /// nuevo. Reutiliza el mismo formulario para crear y editar, en vez de
-  /// duplicar la UI en un diálogo aparte.
+  /// Id del ciclo en edición, o null si el formulario está creando uno
+  /// nuevo (el mismo formulario sirve para crear y editar).
   String? _editandoId;
 
   @override
   void initState() {
     super.initState();
-    _registros =
-        MockCicloData.seedInicial(widget.informacionPersonal.usuarioId);
+    _cargarInicial();
+  }
+
+  Future<void> _cargarInicial() async {
+    setState(() {
+      _cargando = true;
+      _errorCarga = null;
+    });
+    try {
+      final lista = await SintomasService.obtenerCiclos(widget.token);
+      if (!mounted) return;
+      setState(() {
+        _registros = lista;
+        _cargando = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorCarga = e.toString().replaceFirst('Exception: ', '');
+        _cargando = false;
+      });
+    }
+  }
+
+  /// Vuelve a pedir la lista sin mostrar el spinner de pantalla completa,
+  /// para no perder lo que la usuaria tenga escrito en el formulario.
+  Future<void> _recargarLista() async {
+    final lista = await SintomasService.obtenerCiclos(widget.token);
+    if (!mounted) return;
+    setState(() => _registros = lista);
   }
 
   Future<void> _seleccionarFecha({
@@ -65,7 +93,7 @@ class _RegistroCicloScreenState extends State<RegistroCicloScreen> {
     _editandoId = null;
   }
 
-  void _guardarCiclo() {
+  Future<void> _guardarCiclo() async {
     if (_fechaInicio == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona la fecha de inicio')),
@@ -88,35 +116,37 @@ class _RegistroCicloScreenState extends State<RegistroCicloScreen> {
     }
 
     final editando = _editandoId != null;
-
-    setState(() {
+    setState(() => _guardando = true);
+    try {
       if (editando) {
-        final index = _registros.indexWhere((r) => r.id == _editandoId);
-        if (index != -1) {
-          _registros[index] = RegistroCiclo(
-            id: _editandoId!,
-            usuarioId: widget.informacionPersonal.usuarioId,
-            fechaInicio: _fechaInicio!,
-            fechaFin: _fechaFin,
-            abundancia: _abundancia!,
-          );
-        }
-      } else {
-        _registros.add(RegistroCiclo(
-          // TODO(backend): generar el id real al persistir en el servidor.
-          id: 'ciclo_${DateTime.now().microsecondsSinceEpoch}',
-          usuarioId: widget.informacionPersonal.usuarioId,
-          fechaInicio: _fechaInicio!,
-          fechaFin: _fechaFin,
+        await SintomasService.actualizarCiclo(
+          token: widget.token,
+          id: _editandoId!,
+          inicio: _fechaInicio!,
+          fin: _fechaFin,
           abundancia: _abundancia!,
-        ));
+        );
+      } else {
+        await SintomasService.crearCiclo(
+          token: widget.token,
+          inicio: _fechaInicio!,
+          fin: _fechaFin,
+          abundancia: _abundancia!,
+        );
       }
-      _limpiarFormulario();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(editando ? 'Ciclo actualizado' : 'Ciclo registrado')),
-    );
+      await _recargarLista();
+      if (!mounted) return;
+      setState(_limpiarFormulario);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(editando ? 'Ciclo actualizado' : 'Ciclo registrado')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final mensaje = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   void _editarRegistro(RegistroCiclo registro) {
@@ -151,16 +181,45 @@ class _RegistroCicloScreenState extends State<RegistroCicloScreen> {
       ),
     );
 
-    if (confirmar == true) {
-      setState(() {
-        _registros.removeWhere((r) => r.id == registro.id);
-        if (_editandoId == registro.id) _limpiarFormulario();
-      });
+    if (confirmar != true) return;
+
+    try {
+      await SintomasService.eliminarCiclo(token: widget.token, id: registro.id);
+      await _recargarLista();
+      if (!mounted) return;
+      if (_editandoId == registro.id) setState(_limpiarFormulario);
+    } catch (e) {
+      if (!mounted) return;
+      final mensaje = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_cargando) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorCarga != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_errorCarga!, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _cargarInicial,
+                child: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final registrosOrdenados = [..._registros]
       ..sort((a, b) => b.fechaInicio.compareTo(a.fechaInicio));
 
@@ -224,19 +283,26 @@ class _RegistroCicloScreenState extends State<RegistroCicloScreen> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _guardarCiclo,
+                  onPressed: _guardando ? null : _guardarCiclo,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  child: Text(
-                    _editandoId != null ? 'Actualizar ciclo' : 'Guardar ciclo',
-                  ),
+                  child: _guardando
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(
+                          _editandoId != null ? 'Actualizar ciclo' : 'Guardar ciclo',
+                        ),
                 ),
               ),
               if (_editandoId != null) ...[
                 const SizedBox(width: 12),
                 TextButton(
-                  onPressed: () => setState(_limpiarFormulario),
+                  onPressed: _guardando ? null : () => setState(_limpiarFormulario),
                   child: const Text('Cancelar'),
                 ),
               ],
@@ -282,8 +348,7 @@ class _RegistroCicloScreenState extends State<RegistroCicloScreen> {
 }
 
 /// Campo de solo lectura que abre un selector de fecha al tocarlo. Cuando
-/// ya tiene un valor, muestra un botón "✕" para borrarlo (volver a
-/// "Seleccionar fecha") en vez del ícono de calendario.
+/// ya tiene un valor, muestra un botón "✕" para borrarlo.
 class _CampoFecha extends StatelessWidget {
   final String etiqueta;
   final String valor;
