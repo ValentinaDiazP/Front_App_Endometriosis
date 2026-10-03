@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../features/seguimiento/models/localizacion_dolor.dart';
 import '../../features/seguimiento/models/registro_sintoma.dart';
 import '../../features/seguimiento/models/sintoma_asociado.dart';
+import '../../features/seguimiento/models/registro_emocional.dart';
 
 /// Cliente HTTP para /api/sintomas/ (catálogos y registros de síntomas).
 class SintomasService {
@@ -86,5 +87,37 @@ class SintomasService {
     if (response.statusCode != 201) {
       throw Exception('No se pudo guardar el registro. Intenta de nuevo.');
     }
+  }
+
+    static Future<RegistroEmocional?> obtenerCheckInHoy(String token) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/registros-emocionales/hoy/'),
+      headers: _headers(token),
+    );
+    if (response.statusCode == 204) return null; // No hay check-in hoy
+    if (response.statusCode != 200) {
+      throw Exception('No se pudo consultar el check-in de hoy.');
+    }
+    return RegistroEmocional.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  static Future<RegistroEmocional> guardarCheckIn({
+    required String token,
+    required int estadoAnimo,
+    String? notaLibre,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/registros-emocionales/'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'estado_animo': estadoAnimo,
+        if (notaLibre != null && notaLibre.trim().isNotEmpty)
+          'nota_libre': notaLibre.trim(),
+      }),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('No se pudo guardar el check-in.');
+    }
+    return RegistroEmocional.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 }

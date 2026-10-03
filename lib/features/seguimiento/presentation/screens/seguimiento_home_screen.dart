@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/informacion_personal.dart';
 import 'registro_ciclo_screen.dart';
+import 'registro_emocional_screen.dart';
 import 'registro_sintoma_screen.dart';
 
 class SeguimientoHomeScreen extends StatelessWidget {
@@ -16,7 +17,7 @@ class SeguimientoHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Seguimiento'),
@@ -27,6 +28,7 @@ class SeguimientoHomeScreen extends StatelessWidget {
             tabs: [
               Tab(text: 'Síntomas'),
               Tab(text: 'Ciclo'),
+              Tab(text: 'Ánimo'),
             ],
           ),
         ),
@@ -37,6 +39,7 @@ class SeguimientoHomeScreen extends StatelessWidget {
               token: token,
             ),
             RegistroCicloScreen(informacionPersonal: informacionPersonal),
+            RegistroEmocionalScreen(token: token),
           ],
         ),
       ),
