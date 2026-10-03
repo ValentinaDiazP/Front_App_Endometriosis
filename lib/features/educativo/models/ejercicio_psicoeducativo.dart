@@ -28,6 +28,9 @@ class EjercicioPsicoeducativo {
   final String instrucciones;
   final int minutosEstimados;
 
+  /// Enlace opcional a un video o podcast externo (YouTube, Spotify…).
+  final String? urlRecurso;
+
   const EjercicioPsicoeducativo({
     required this.idEjercicio,
     required this.nombre,
@@ -35,5 +38,6 @@ class EjercicioPsicoeducativo {
     required this.descripcion,
     required this.instrucciones,
     required this.minutosEstimados,
+    this.urlRecurso,
   });
 }

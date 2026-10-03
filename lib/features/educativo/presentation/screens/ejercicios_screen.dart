@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../data/educativo_repository.dart';
+import '../../data/modulos_psicoeducativos_mock.dart';
 import '../../models/ejercicio_psicoeducativo.dart';
 import '../../educativo_routes.dart';
 import '../widgets/aviso_pendiente_card.dart';
+import '../widgets/progreso_modulo_mini.dart';
 
 /// Lista de ejercicios psicoeducativos, agrupados por enfoque
 /// (Psicoeducación / TCC / ACT y Mindfulness).
@@ -47,6 +49,7 @@ class _EjerciciosScreenState extends State<EjerciciosScreen> {
                 for (final ejercicio in porTipo[tipo]!)
                   Builder(builder: (context) {
                     final completado = EducativoRepository.ejercicioCompletado(ejercicio.idEjercicio);
+                    final modulo = ModulosPsicoeducativosMock.deEjercicio(ejercicio.idEjercicio);
                     return Card(
                       child: ListTile(
                         leading: CircleAvatar(
@@ -57,7 +60,21 @@ class _EjerciciosScreenState extends State<EjerciciosScreen> {
                           ),
                         ),
                         title: Text(ejercicio.nombre),
-                        subtitle: Text('${ejercicio.minutosEstimados} min · ${ejercicio.descripcion}'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${ejercicio.minutosEstimados} min · ${ejercicio.descripcion}'),
+                            if (modulo != null) ...[
+                              const SizedBox(height: 6),
+                              ProgresoModuloMini(
+                                pasosAlcanzados: EducativoRepository.pasosAlcanzadosModulo(
+                                    ejercicio.idEjercicio),
+                                totalPasos: modulo.totalPasos,
+                                completado: completado,
+                              ),
+                            ],
+                          ],
+                        ),
                         isThreeLine: true,
                         onTap: () => _abrir(ejercicio),
                       ),

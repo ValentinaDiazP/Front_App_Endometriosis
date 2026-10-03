@@ -21,6 +21,9 @@ class ContenidoEducativo {
   final String cuerpo; // texto largo / guion del audio-video (placeholder)
   final int minutosEstimados;
 
+  /// Enlace opcional a un video o podcast externo (YouTube, Spotify…).
+  final String? urlRecurso;
+
   const ContenidoEducativo({
     required this.idContenido,
     required this.idCategoriaFK,
@@ -32,5 +35,6 @@ class ContenidoEducativo {
     required this.resumen,
     required this.cuerpo,
     required this.minutosEstimados,
+    this.urlRecurso,
   });
 }
