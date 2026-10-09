@@ -3,12 +3,14 @@ class Comentario {
   final String? usuarioNombre;
   final String texto;
   final String fechaCreacion;
+  final int totalLikes;
 
   Comentario({
     required this.id,
     this.usuarioNombre,
     required this.texto,
     required this.fechaCreacion,
+    this.totalLikes = 0,
   });
 
   factory Comentario.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,7 @@ class Comentario {
       usuarioNombre: json['usuario_nombre'],
       texto: json['texto'] ?? '',
       fechaCreacion: json['fecha_creacion'] ?? '',
+      totalLikes: json['total_likes'] ?? 0,
     );
   }
 }

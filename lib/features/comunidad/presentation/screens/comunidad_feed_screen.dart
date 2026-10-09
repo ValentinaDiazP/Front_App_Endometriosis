@@ -1,8 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../models/publicacion_model.dart';
 import '../../services/comunidad_service.dart';
+import 'crear_publicacion_screen.dart';
 
 class ComunidadFeedScreen extends StatefulWidget {
   final String? token; // Token de la usuaria autenticada (opcional)
@@ -76,80 +75,220 @@ class _ComunidadFeedScreenState extends State<ComunidadFeedScreen> {
   }
 
   // ===========================================================================
-  // 2. MODAL PARA COMENTARIOS
+  // 1.B. DIÁLOGO PARA REPORTAR COMENTARIO
+  // ===========================================================================
+  void _mostrarDialogoReporteComentario(int comentarioId, VoidCallback onEliminarLocal) {
+    final TextEditingController motivoController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reportar comentario'),
+        content: TextField(
+          controller: motivoController,
+          decoration: const InputDecoration(
+            hintText: 'Describe el motivo del reporte...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final motivo = motivoController.text.trim();
+              if (motivo.isNotEmpty) {
+                final exito = await _service.reportarComentario(comentarioId, motivo, widget.token);
+                if (!mounted) return;
+                Navigator.pop(ctx);
+                if (exito) {
+                  onEliminarLocal();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Comentario reportado y eliminado de la vista')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Error al reportar comentario')),
+                  );
+                }
+              }
+            },
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // 2. MODAL PARA COMENTARIOS (CON ORDENAMIENTO Y REPORTAR COMENTARIO)
   // ===========================================================================
   void _mostrarModalComentarios(Publicacion post) {
     final TextEditingController comentarioController = TextEditingController();
+    String ordenSeleccionado = 'recientes'; // 'recientes' o 'top'
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-          top: 16,
-          left: 16,
-          right: 16,
-        ),
-        child: SizedBox(
-          height: MediaQuery.of(ctx).size.height * 0.5,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Comentarios',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const Divider(),
-              Expanded(
-                child: post.comentarios.isEmpty
-                    ? const Center(child: Text('Aún no hay comentarios. ¡Sé la primera!'))
-                    : ListView.builder(
-                        itemCount: post.comentarios.length,
-                        itemBuilder: (context, index) {
-                          final c = post.comentarios[index];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              c.usuarioNombre ?? 'Anónima',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(c.texto),
-                          );
+      builder: (ctx) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setStateModal) {
+          // Copia y ordenamiento de comentarios
+          List<Comentario> comentariosList = List.from(post.comentarios);
+          if (ordenSeleccionado == 'top') {
+            comentariosList.sort((a, b) => b.totalLikes.compareTo(a.totalLikes));
+          }
+
+          // Identificar el comentario más apoyado si hay top
+          int? maxLikesTop;
+          if (comentariosList.isNotEmpty) {
+            maxLikesTop = comentariosList.map((c) => c.totalLikes).reduce((a, b) => a > b ? a : b);
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+              top: 16,
+              left: 16,
+              right: 16,
+            ),
+            child: SizedBox(
+              height: MediaQuery.of(ctx).size.height * 0.6,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Comentarios',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      // Selector de Ordenamiento
+                      DropdownButton<String>(
+                        value: ordenSeleccionado,
+                        items: const [
+                          DropdownMenuItem(value: 'recientes', child: Text('Más recientes')),
+                          DropdownMenuItem(value: 'top', child: Text('Top comentarios')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setStateModal(() {
+                              ordenSeleccionado = val;
+                            });
+                          }
                         },
                       ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: comentarioController,
-                      decoration: const InputDecoration(
-                        hintText: 'Escribe un comentario...',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: Colors.purple),
-                    onPressed: () async {
-                      final texto = comentarioController.text.trim();
-                      if (texto.isNotEmpty) {
-                        final exito = await _service.comentar(post.id, texto, widget.token);
-                        if (!mounted) return;
-                        if (exito) {
-                          Navigator.pop(ctx);
-                          _actualizarFeed(); // Refresca para listar el nuevo comentario
-                        }
-                      }
-                    },
+                  const Divider(),
+                  Expanded(
+                    child: comentariosList.isEmpty
+                        ? const Center(child: Text('Aún no hay comentarios. ¡Sé la primera!'))
+                        : ListView.builder(
+                            itemCount: comentariosList.length,
+                            itemBuilder: (context, index) {
+                              final c = comentariosList[index];
+                              final bool esTopApoyado = ordenSeleccionado == 'top' &&
+                                  maxLikesTop != null &&
+                                  maxLikesTop > 0 &&
+                                  c.totalLikes == maxLikesTop;
+
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Row(
+                                  children: [
+                                    Text(
+                                      c.usuarioNombre ?? 'Anónima',
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    if (esTopApoyado) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber[100],
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Icon(Icons.star_rounded, size: 12, color: Colors.brown),
+                                            SizedBox(width: 2),
+                                            Text(
+                                              'Más apoyado',
+                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.brown),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                subtitle: Text(c.texto),
+                                trailing: PopupMenuButton<String>(
+                                  onSelected: (value) {
+                                    if (value == 'reportar_comentario') {
+                                      _mostrarDialogoReporteComentario(c.id, () {
+                                        setStateModal(() {
+                                          post.comentarios.removeWhere((item) => item.id == c.id);
+                                        });
+                                        setState(() {});
+                                      });
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 'reportar_comentario',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.flag_outlined, color: Colors.red, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('Reportar comentario'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: comentarioController,
+                          decoration: const InputDecoration(
+                            hintText: 'Escribe un comentario...',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Colors.purple),
+                        onPressed: () async {
+                          final texto = comentarioController.text.trim();
+                          if (texto.isNotEmpty) {
+                            final exito = await _service.comentar(post.id, texto, widget.token);
+                            if (!mounted) return;
+                            if (exito) {
+                              Navigator.pop(ctx);
+                              _actualizarFeed(); // Refresca para listar el nuevo comentario
+                            }
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -158,104 +297,23 @@ class _ComunidadFeedScreenState extends State<ComunidadFeedScreen> {
   // 3. MODAL PARA CREAR PUBLICACIÓN
   // ===========================================================================
   void _mostrarModalCrearPost() {
-    final TextEditingController contenidoController = TextEditingController();
-    File? imagenSeleccionada;
-    final ImagePicker picker = ImagePicker();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                top: 16,
-                left: 16,
-                right: 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Crear Publicación',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: contenidoController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      hintText: '¿Qué quieres compartir hoy?',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  if (imagenSeleccionada != null)
-                    Stack(
-                      alignment: Alignment.topRight,
-                      children: [
-                        Image.file(imagenSeleccionada!, height: 120, fit: BoxFit.cover),
-                        IconButton(
-                          icon: const Icon(Icons.cancel, color: Colors.red),
-                          onPressed: () => setModalState(() => imagenSeleccionada = null),
-                        )
-                      ],
-                    ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.photo_library, color: Colors.purple),
-                        onPressed: () async {
-                          final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-                          if (image != null) {
-                            setModalState(() => imagenSeleccionada = File(image.path));
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.camera_alt, color: Colors.purple),
-                        onPressed: () async {
-                          final XFile? image = await picker.pickImage(source: ImageSource.camera);
-                          if (image != null) {
-                            setModalState(() => imagenSeleccionada = File(image.path));
-                          }
-                        },
-                      ),
-                      const Spacer(),
-                      ElevatedButton(
-                        onPressed: () async {
-                          if (contenidoController.text.trim().isEmpty) return;
-
-                          bool exito = await _service.crearPublicacion(
-                            contenidoController.text,
-                            imagenSeleccionada,
-                            token: widget.token,
-                          );
-
-                          if (exito && mounted) {
-                            Navigator.pop(context);
-                            _actualizarFeed();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Publicación enviada a revisión por administración'),
-                              ),
-                            );
-                          }
-                        },
-                        child: const Text('Publicar'),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            );
-          },
+        return CrearPublicacionScreen(
+          token: widget.token,
+          service: _service,
         );
       },
-    );
+    ).then((exito) {
+      if (exito == true && mounted) {
+        _actualizarFeed();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Publicación creada')),
+        );
+      }
+    });
   }
 
   // ===========================================================================
@@ -281,16 +339,27 @@ class _ComunidadFeedScreenState extends State<ComunidadFeedScreen> {
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text('Aún no hay publicaciones aprobadas. ¡Sé la primera en escribir!'),
+            return ListView(
+              padding: const EdgeInsets.all(12),
+              children: [
+                _buildCardProposito(),
+                const SizedBox(height: 40),
+                const Center(
+                  child: Text('Aún no hay publicaciones aprobadas. ¡Sé la primera en escribir!'),
+                ),
+              ],
             );
           }
 
           final publicaciones = snapshot.data!;
           return ListView.builder(
-            itemCount: publicaciones.length,
+            itemCount: publicaciones.length + 1, // +1 para incluir la tarjeta de propósito al inicio
             itemBuilder: (context, index) {
-              final post = publicaciones[index];
+              if (index == 0) {
+                return _buildCardProposito();
+              }
+
+              final post = publicaciones[index - 1];
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: Padding(
@@ -399,6 +468,45 @@ class _ComunidadFeedScreenState extends State<ComunidadFeedScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _mostrarModalCrearPost,
         child: const Icon(Icons.edit),
+      ),
+    );
+  }
+
+  // Tarjeta de Propósito en el Feed (Sin emojis, usando Iconos vectoriales)
+  Widget _buildCardProposito() {
+    return Card(
+      margin: const EdgeInsets.all(12),
+      color: Colors.purple[50],
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '¿Para qué es la Comunidad Florecer?',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.purple),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Un espacio seguro y libre de juicios para compartir experiencias sobre endometriosis y bienestar femenino.',
+              style: TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: const [
+                Icon(Icons.edit_note, size: 16, color: Colors.purple),
+                SizedBox(width: 4),
+                Text('+10 pts por publicar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.purple)),
+                SizedBox(width: 12),
+                Icon(Icons.chat_bubble_outline, size: 14, color: Colors.purple),
+                SizedBox(width: 4),
+                Text('+5 pts por apoyar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.purple)),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

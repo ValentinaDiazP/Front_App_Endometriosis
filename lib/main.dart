@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'core/navigation/app_router.dart';
 import 'features/educativo/presentation/screens/educativo_home_screen.dart';
 import 'features/educativo/presentation/screens/preferencias_screen.dart';
 import 'core/services/auth_service.dart';
 import 'features/seguimiento/models/informacion_personal.dart';
 import 'features/seguimiento/presentation/screens/seguimiento_home_screen.dart';
-import 'features/comunidad/presentation/screens/comunidad_feed_screen.dart'; // Ajusta la ruta exacta según tu estructura de carpetas
+import 'features/seguimiento/presentation/screens/perfil_screen.dart';
+import 'features/comunidad/presentation/screens/comunidad_feed_screen.dart';
+import 'features/bienestar/presentation/screens/profesionales_screen.dart';
 void main() {
   runApp(const FlorecerApp());
 }
@@ -790,14 +790,17 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
   int _selectedIndex = 0;
 
   late final List<Widget> _widgetOptions = <Widget>[
-    const WellnessModule(), // Módulo Bienestar
-    const ComunidadFeedScreen(), // Módulo Comunidad
+    WellnessModule(token: widget.token),
     SeguimientoHomeScreen(
       informacionPersonal: widget.informacionPersonal,
       token: widget.token,
-    ), // Módulo Registro (Seguimiento)
-    const ReportsModule(), // Módulo Reportes
-    EducativoHomeScreen(token: widget.token), // Módulo Educativo
+    ),
+    const ReportsModule(),
+    EducativoHomeScreen(token: widget.token),
+    PerfilScreen(
+      informacionPersonal: widget.informacionPersonal,
+      token: widget.token,
+    ),
   ];
 
   void _onItemTapped(int index) {
@@ -816,10 +819,10 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Bienestar'),
-          BottomNavigationBarItem(icon: Icon(Icons.people_outline), label: 'Comunidad'),
           BottomNavigationBarItem(icon: Icon(Icons.edit_note), label: 'Registro'),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Reportes'),
           BottomNavigationBarItem(icon: Icon(Icons.school_outlined), label: 'Educativo'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: AppColors.primary,
@@ -835,7 +838,9 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
 // --- 5. MÓDULO BIENESTAR (ACTUALIZADO CON PESTAÑAS Y DJANGO) ---
 
 class WellnessModule extends StatelessWidget {
-  const WellnessModule({super.key});
+  final String token;
+
+  const WellnessModule({super.key, required this.token});
 
   @override
   Widget build(BuildContext context) {
@@ -851,15 +856,15 @@ class WellnessModule extends StatelessWidget {
             tabs: [
               Tab(icon: Icon(Icons.storefront), text: 'Tienda'),
               Tab(icon: Icon(Icons.medical_services), text: 'Profesionales'),
-              Tab(icon: Icon(Icons.people), text: 'Comunidad'), // Se mantiene el nombre 'Comunidad'
+              Tab(icon: Icon(Icons.people), text: 'Comunidad'),
             ],
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
-            StoreTab(),
-            ProfessionalsTab(),
-            ComunidadFeedScreen(), // Se carga la vista del feed de la comunidad
+            const StoreTab(),
+            ProfesionalesScreen(token: token),
+            ComunidadFeedScreen(token: token),
           ],
         ),
       ),
@@ -900,77 +905,6 @@ class StoreTab extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// SUB-PESTAÑA 2: PROFESIONALES (CONECTADO A DJANGO)
-class ProfessionalsTab extends StatefulWidget {
-  const ProfessionalsTab({super.key});
-
-  @override
-  State<ProfessionalsTab> createState() => _ProfessionalsTabState();
-}
-
-class _ProfessionalsTabState extends State<ProfessionalsTab> {
-  // Usa 127.0.0.1 para Chrome web o 10.0.2.2 para emulador Android
-  final String apiUrl = 'http://10.0.2.2:8000/api/bienestar/professionals/';
-  Future<List<dynamic>> fetchProfessionals() async {
-    final response = await http.get(Uri.parse(apiUrl));
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Error al conectar con la API de Django');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<dynamic>>(
-      future: fetchProfessionals(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Text(
-                'Error de conexión con Backend Django:\n${snapshot.error}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.danger),
-              ),
-            ),
-          );
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('No hay profesionales registrados aún.'));
-        }
-
-        final professionals = snapshot.data!;
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: professionals.length,
-          itemBuilder: (context, index) {
-            final item = professionals[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: AppColors.primary,
-                  child: Icon(Icons.person, color: Colors.white),
-                ),
-                title: Text(item['name'] ?? 'Sin nombre', style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('${item['specialty'] ?? ''}\nTarifa: ${item['rate'] ?? ''}'),
-                isThreeLine: true,
-                trailing: Text(
-                  item['availability'] ?? '',
-                  style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold),
-                ),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }

@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import '../models/publicacion_model.dart';
 
 class ComunidadService {
-  // Configuración dinámica de URL según la plataforma de ejecución
   static String get baseUrl {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:8000/api/bienestar';
@@ -35,8 +34,13 @@ class ComunidadService {
     }
   }
 
-  // Crear publicación (el backend la registrará con estado PENDIENTE)
-  Future<bool> crearPublicacion(String contenido, File? imagen, {String? token}) async {
+  // Crear publicación con soporte para anonimato (se crea en estado APROBADO por defecto)
+  Future<bool> crearPublicacion(
+    String contenido, 
+    File? imagen, {
+    bool esAnonimo = false, 
+    String? token
+  }) async {
     var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/publicaciones/'));
 
     if (token != null && token.isNotEmpty) {
@@ -44,13 +48,14 @@ class ComunidadService {
     }
 
     request.fields['contenido'] = contenido;
+    request.fields['es_anonimo'] = esAnonimo.toString();
 
     if (imagen != null) {
       request.files.add(await http.MultipartFile.fromPath('imagen', imagen.path));
     }
 
     var streamedResponse = await request.send();
-    return streamedResponse.statusCode == 201;
+    return streamedResponse.statusCode == 201 || streamedResponse.statusCode == 200;
   }
 
   // 1. Dar o quitar Me Gusta
@@ -75,10 +80,10 @@ class ComunidadService {
       },
       body: jsonEncode({'texto': texto}),
     );
-    return response.statusCode == 201;
+    return response.statusCode == 200 || response.statusCode == 201;
   }
 
-  // 3. Reportar Publicación
+  // 3. Reportar Publicación (Acepta HTTP 200 o 201)
   Future<bool> reportar(int publicacionId, String motivo, String? token) async {
     final response = await http.post(
       Uri.parse('$baseUrl/publicaciones/$publicacionId/reportar/'),
@@ -88,6 +93,19 @@ class ComunidadService {
       },
       body: jsonEncode({'motivo': motivo}),
     );
-    return response.statusCode == 201;
+    return response.statusCode == 200 || response.statusCode == 201;
+  }
+
+  // 4. Reportar Comentario
+  Future<bool> reportarComentario(int comentarioId, String motivo, String? token) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/comentarios/$comentarioId/reportar/'),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Token $token',
+      },
+      body: jsonEncode({'motivo': motivo}),
+    );
+    return response.statusCode == 200 || response.statusCode == 201;
   }
 }
