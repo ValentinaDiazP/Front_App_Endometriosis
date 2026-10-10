@@ -9,6 +9,7 @@ import 'features/seguimiento/presentation/screens/seguimiento_home_screen.dart';
 import 'features/seguimiento/presentation/screens/perfil_screen.dart';
 import 'features/comunidad/presentation/screens/comunidad_feed_screen.dart';
 import 'features/bienestar/presentation/screens/profesionales_screen.dart';
+import 'features/seguimiento/presentation/screens/reportes_screen.dart';
 void main() {
   runApp(const FlorecerApp());
 }
@@ -795,7 +796,7 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
       informacionPersonal: widget.informacionPersonal,
       token: widget.token,
     ),
-    const ReportsModule(),
+    ReportesScreen(token: widget.token),
     EducativoHomeScreen(token: widget.token),
     PerfilScreen(
       informacionPersonal: widget.informacionPersonal,

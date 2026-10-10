@@ -7,6 +7,7 @@ import '../../features/seguimiento/models/sintoma_asociado.dart';
 import '../../features/seguimiento/models/registro_emocional.dart';
 import '../../features/seguimiento/models/progreso_gamificacion.dart';
 import '../../features/seguimiento/models/registro_ciclo.dart';
+import '../../features/seguimiento/models/historial_sintoma.dart';
 /// Cliente HTTP para /api/sintomas/ (catálogos y registros de síntomas).
 class SintomasService {
   SintomasService._();
@@ -121,6 +122,38 @@ class SintomasService {
     }
     return RegistroEmocional.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
+     /// Todos los check-ins emocionales de la usuaria (para Reportes).
+    static Future<List<RegistroEmocional>> obtenerCheckIns(String token) async {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/registros-emocionales/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode != 200) {
+        throw Exception('No se pudo cargar tu historial de ánimo.');
+      }
+      final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      final registros = lista
+          .map((e) => RegistroEmocional.fromJson(e as Map<String, dynamic>))
+          .toList();
+      registros.sort((a, b) => a.fecha.compareTo(b.fecha));
+      return registros;
+    }
+      /// Todos los registros de síntomas de la usuaria, del más antiguo al más reciente.
+    static Future<List<HistorialSintoma>> obtenerHistorialSintomas(String token) async {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/registros-sintoma/'),
+        headers: _headers(token),
+      );
+      if (response.statusCode != 200) {
+        throw Exception('No se pudo cargar tu historial de síntomas.');
+      }
+      final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      final registros = lista
+          .map((e) => HistorialSintoma.fromJson(e as Map<String, dynamic>))
+          .toList();
+      registros.sort((a, b) => a.fechaHora.compareTo(b.fechaHora));
+      return registros;
+    }
 
     static Future<ProgresoGamificacion> obtenerProgreso(String token) async {
     final response = await http.get(
