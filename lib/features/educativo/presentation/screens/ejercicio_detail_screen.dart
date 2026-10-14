@@ -6,12 +6,14 @@ import '../../models/modulo_psicoeducativo.dart';
 import '../widgets/boton_recurso_externo.dart';
 import '../widgets/progreso_modulo_mini.dart';
 import '../../../../core/theme/app_theme.dart';
+import 'ejercicio_catastrofizacion_screen.dart';
 import 'ejercicio_tcc_screen.dart';
+import 'ejercicio_valores_screen.dart';
 import 'modulo_guiado_screen.dart';
 import 'practica_guiada_screen.dart';
 
 /// Formas en que se presenta un ejercicio según su tipo.
-enum _Formato { modulo, tcc, practica, simple }
+enum _Formato { modulo, tcc, catastrofizacion, practica, valores, simple }
 
 /// Pantalla de un ejercicio (portada). Según el tipo:
 ///
@@ -129,6 +131,18 @@ class _EjercicioDetailScreenState extends State<EjercicioDetailScreen> {
                           'Revisas qué lo apoya y qué no encaja con él.',
                           'Escribes una versión más balanceada.',
                         ]),
+                      _Formato.catastrofizacion => _contenidoInteractivo(ejercicio, const [
+                          'Escribes el miedo y cuánta angustia te genera.',
+                          'Imaginas el peor, el mejor y el más probable escenario.',
+                          'Estimas qué tan probable es el peor.',
+                          'Armas un plan para afrontarlo y revisas cómo te sientes.',
+                        ]),
+                      _Formato.valores => _contenidoInteractivo(ejercicio, const [
+                          'Eliges hasta tres valores que son importantes para ti.',
+                          'Calificas cuánto te importan hoy.',
+                          'Defines un paso pequeño para esta semana.',
+                          'Al final nos cuentas qué tan útil te resultó.',
+                        ]),
                       _Formato.practica => _contenidoInteractivo(ejercicio, [
                           'Un temporizador de ${ejercicio.minutosEstimados} minutos.',
                           'Indicaciones que van cambiando para guiarte.',
@@ -151,6 +165,9 @@ class _EjercicioDetailScreenState extends State<EjercicioDetailScreen> {
 
   _Formato get _formato {
     if (_modulo != null) return _Formato.modulo;
+    // Ejercicios con pantalla propia (ids del catálogo del backend).
+    if (widget.ejercicio.idEjercicio == 'e7') return _Formato.catastrofizacion;
+    if (widget.ejercicio.idEjercicio == 'e8') return _Formato.valores;
     switch (widget.ejercicio.tipo) {
       case TipoEjercicio.tcc:
         return _Formato.tcc;
@@ -179,6 +196,18 @@ class _EjercicioDetailScreenState extends State<EjercicioDetailScreen> {
         return FilledButton.icon(
           onPressed: () => _abrir(EjercicioTccScreen(ejercicio: ejercicio)),
           icon: Icon(_completado ? Icons.replay : Icons.edit_note_rounded),
+          label: Text(_completado ? 'Hacer de nuevo' : 'Comenzar ejercicio'),
+        );
+      case _Formato.catastrofizacion:
+        return FilledButton.icon(
+          onPressed: () => _abrir(EjercicioCatastrofizacionScreen(ejercicio: ejercicio)),
+          icon: Icon(_completado ? Icons.replay : Icons.edit_note_rounded),
+          label: Text(_completado ? 'Hacer de nuevo' : 'Comenzar ejercicio'),
+        );
+      case _Formato.valores:
+        return FilledButton.icon(
+          onPressed: () => _abrir(EjercicioValoresScreen(ejercicio: ejercicio)),
+          icon: Icon(_completado ? Icons.replay : Icons.explore_outlined),
           label: Text(_completado ? 'Hacer de nuevo' : 'Comenzar ejercicio'),
         );
       case _Formato.practica:
