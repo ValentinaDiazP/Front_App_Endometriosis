@@ -57,6 +57,10 @@ class PerfilUsuaria {
 class AuthService {
   AuthService._();
 
+  static String? _currentToken;
+  static String? get token => _currentToken;
+  static set token(String? value) => _currentToken = value;
+
     /// 127.0.0.1 funciona en Chrome (web) y en escritorio. 10.0.2.2 es el
   /// alias especial que usa un emulador Android para referirse a la propia
   /// máquina donde corre el backend — sin esto, la app fallaría al probar

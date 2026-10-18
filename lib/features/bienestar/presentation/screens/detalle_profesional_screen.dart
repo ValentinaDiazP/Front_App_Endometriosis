@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/profesional.dart';
+import 'agendar_cita_screen.dart';
 
 class DetalleProfesionalScreen extends StatelessWidget {
   final Profesional profesional;
@@ -96,7 +97,7 @@ class DetalleProfesionalScreen extends StatelessWidget {
                       children: const [
                         Icon(Icons.card_giftcard, size: 18, color: Colors.pinkAccent),
                         SizedBox(width: 8),
-                        Expanded(child: Text('+20 puntos para tu nivel de bienestar al completar la cita.')),
+                        Expanded(child: Text('+50 puntos para tu nivel de bienestar al completar la cita.')),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -121,16 +122,37 @@ class DetalleProfesionalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Botón de Agenciamiento / Contacto
+            // Botones de Acción: Agendar con Disponibilidad y WhatsApp
             ElevatedButton.icon(
-              onPressed: onContactar,
-              icon: const Icon(Icons.chat, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AgendarCitaScreen(profesional: profesional),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.calendar_month, color: Colors.white),
               label: const Text(
-                'Agendar cita por Florecer',
+                'Agendar Cita (Ver Horarios Disponibles)',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF25D366),
+                backgroundColor: Colors.teal,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onContactar,
+              icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+              label: const Text(
+                'Contactar por WhatsApp',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF25D366)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -216,3 +238,4 @@ class DetalleProfesionalScreen extends StatelessWidget {
     );
   }
 }
+

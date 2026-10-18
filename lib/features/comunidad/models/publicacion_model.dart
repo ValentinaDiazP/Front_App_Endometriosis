@@ -30,6 +30,7 @@ class Publicacion {
   final String contenido;
   final String? imagenUrl;
   final String fechaCreacion;
+  final String categoria;
   final int totalLikes;
   final bool meGusta;
   final int totalComentarios;
@@ -41,6 +42,7 @@ class Publicacion {
     required this.contenido,
     this.imagenUrl,
     required this.fechaCreacion,
+    required this.categoria,
     required this.totalLikes,
     required this.meGusta,
     required this.totalComentarios,
@@ -54,6 +56,7 @@ class Publicacion {
       contenido: json['contenido'] ?? '',
       imagenUrl: json['imagen'],
       fechaCreacion: json['fecha_creacion'] ?? '',
+      categoria: json['categoria'] ?? 'HISTORIAS_APOYO',
       totalLikes: json['total_likes'] ?? 0,
       meGusta: json['me_gusta'] ?? false,
       totalComentarios: json['total_comentarios'] ?? 0,

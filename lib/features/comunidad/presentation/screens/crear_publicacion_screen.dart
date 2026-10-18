@@ -24,6 +24,24 @@ class _CrearPublicacionScreenState extends State<CrearPublicacionScreen> {
   bool _esAnonimo = false;
   bool _enviando = false;
 
+  // Categoría seleccionada por defecto (obligatoria)
+  String _categoriaSeleccionada = 'HISTORIAS_APOYO';
+
+  final List<Map<String, String>> _categoriasOpciones = [
+    {
+      'key': 'DIAGNOSTICO_TRATAMIENTO',
+      'label': 'Diagnóstico y Tratamiento',
+    },
+    {
+      'key': 'ESTILO_VIDA',
+      'label': 'Alimentación y Estilo de Vida',
+    },
+    {
+      'key': 'HISTORIAS_APOYO',
+      'label': 'Historias y Apoyo Emocional',
+    },
+  ];
+
   @override
   void dispose() {
     _contenidoController.dispose();
@@ -38,6 +56,7 @@ class _CrearPublicacionScreenState extends State<CrearPublicacionScreen> {
       _contenidoController.text,
       _imagenSeleccionada,
       esAnonimo: _esAnonimo,
+      categoria: _categoriaSeleccionada,
       token: widget.token,
     );
     if (!mounted) return;
@@ -71,11 +90,38 @@ class _CrearPublicacionScreenState extends State<CrearPublicacionScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
+            
+            // Selector obligatorio de Hilo / Categoría
+            const Text(
+              'Selecciona el hilo para tu publicación:',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple),
+            ),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              initialValue: _categoriaSeleccionada,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              items: _categoriasOpciones.map((cat) {
+                return DropdownMenuItem<String>(
+                  value: cat['key'],
+                  child: Text(cat['label']!),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => _categoriaSeleccionada = val);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+
             TextField(
               controller: _contenidoController,
-              maxLines: 3,
+              maxLines: 4,
               decoration: const InputDecoration(
-                hintText: '¿Qué quieres compartir hoy?',
+                hintText: '¿Qué quieres compartir hoy con la comunidad?',
                 border: OutlineInputBorder(),
               ),
             ),

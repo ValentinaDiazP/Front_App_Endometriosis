@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:intl/date_symbol_data_local.dart';
 import 'core/navigation/app_router.dart';
 import 'features/educativo/presentation/screens/educativo_home_screen.dart';
+import 'features/educativo/presentation/screens/chatbot_screen.dart';
 import 'features/educativo/presentation/screens/preferencias_screen.dart';
 import 'core/services/auth_service.dart';
 import 'features/seguimiento/models/informacion_personal.dart';
@@ -9,8 +11,11 @@ import 'features/seguimiento/presentation/screens/seguimiento_home_screen.dart';
 import 'features/seguimiento/presentation/screens/perfil_screen.dart';
 import 'features/comunidad/presentation/screens/comunidad_feed_screen.dart';
 import 'features/bienestar/presentation/screens/profesionales_screen.dart';
+import 'features/bienestar/presentation/screens/mis_citas_screen.dart';
 import 'features/seguimiento/presentation/screens/reportes_screen.dart';
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  initializeDateFormatting('es_ES', null);
   runApp(const FlorecerApp());
 }
 
@@ -816,6 +821,19 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
       body: IndexedStack(
         index: _selectedIndex,
         children: _widgetOptions,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ChatbotScreen(token: widget.token),
+            ),
+          );
+        },
+        backgroundColor: const Color(0xFF8E44AD),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.local_florist),
+        label: const Text('Agente', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[

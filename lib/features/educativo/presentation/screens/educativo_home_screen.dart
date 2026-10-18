@@ -4,6 +4,7 @@ import 'categorias_screen.dart';
 import 'para_ti_screen.dart';
 import 'ejercicios_screen.dart';
 import 'rutas_screen.dart';
+import 'chatbot_screen.dart';
 
 /// Pantalla contenedora del módulo Educativo.
 ///
@@ -29,6 +30,20 @@ class EducativoHomeScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Educativo'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.support_agent),
+              tooltip: 'Asistente Endometriosis',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatbotScreen(token: token),
+                  ),
+                );
+              },
+            ),
+          ],
           bottom: const TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,

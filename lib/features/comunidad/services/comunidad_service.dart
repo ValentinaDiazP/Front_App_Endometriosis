@@ -12,8 +12,8 @@ class ComunidadService {
     return 'http://127.0.0.1:8000/api/bienestar';
   }
 
-  // Obtenemos solo publicaciones APROBADAS desde el backend
-  Future<List<Publicacion>> obtenerPublicaciones({String? token}) async {
+  // Obtenemos solo publicaciones APROBADAS desde el backend, con filtro opcional de categoría
+  Future<List<Publicacion>> obtenerPublicaciones({String? token, String? categoria}) async {
     final headers = <String, String>{
       'Content-Type': 'application/json; charset=UTF-8',
     };
@@ -21,8 +21,13 @@ class ComunidadService {
       headers['Authorization'] = 'Token $token';
     }
 
+    String url = '$baseUrl/publicaciones/';
+    if (categoria != null && categoria.isNotEmpty) {
+      url += '?categoria=$categoria';
+    }
+
     final response = await http.get(
-      Uri.parse('$baseUrl/publicaciones/'),
+      Uri.parse(url),
       headers: headers,
     );
 
@@ -34,11 +39,12 @@ class ComunidadService {
     }
   }
 
-  // Crear publicación con soporte para anonimato (se crea en estado APROBADO por defecto)
+  // Crear publicación con soporte para anonimato y categoría
   Future<bool> crearPublicacion(
     String contenido, 
     File? imagen, {
     bool esAnonimo = false, 
+    String categoria = 'HISTORIAS_APOYO',
     String? token
   }) async {
     var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/publicaciones/'));
@@ -49,6 +55,7 @@ class ComunidadService {
 
     request.fields['contenido'] = contenido;
     request.fields['es_anonimo'] = esAnonimo.toString();
+    request.fields['categoria'] = categoria;
 
     if (imagen != null) {
       request.files.add(await http.MultipartFile.fromPath('imagen', imagen.path));
