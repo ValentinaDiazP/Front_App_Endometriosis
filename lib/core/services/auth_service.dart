@@ -25,6 +25,7 @@ class PerfilUsuaria {
   final String? diagnostico;
   final int edad;
   final bool onboardingCompletado;
+  final bool esPremium;
 
   const PerfilUsuaria({
     required this.usuarioId,
@@ -35,6 +36,7 @@ class PerfilUsuaria {
     this.diagnostico,
     required this.edad,
     required this.onboardingCompletado,
+    this.esPremium = false,
   });
 
   factory PerfilUsuaria.fromJson(Map<String, dynamic> json) {
@@ -49,6 +51,7 @@ class PerfilUsuaria {
       diagnostico: json['diagnostico'] as String?,
       edad: json['edad'] as int,
       onboardingCompletado: json['onboarding_completado'] as bool,
+      esPremium: (json['es_premium'] as bool?) ?? false,
     );
   }
 }
