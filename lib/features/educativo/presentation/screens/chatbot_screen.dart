@@ -20,6 +20,14 @@ class ChatMessage {
   }) : timestamp = timestamp ?? DateTime.now();
 }
 
+class CategoriaChat {
+  final String id;
+  final String nombre;
+  final IconData icono;
+
+  const CategoriaChat({required this.id, required this.nombre, required this.icono});
+}
+
 class ChatbotScreen extends StatefulWidget {
   final String? token;
 
@@ -33,13 +41,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
-  static const List<String> _preguntasFijas = [
-    "¿Qué hacer en un brote de dolor?",
-    "Alimentos antiinflamatorios",
-    "Manejo de la fatiga crónica",
-    "Fisioterapia pélvica",
-    "¿Cómo gestionar la ansiedad?",
-  ];
+  
+  List<Map<String, dynamic>> _todasPreguntas = [];
   List<String> _preguntasSugeridas = [
     "¿Qué hacer en un brote de dolor?",
     "Alimentos antiinflamatorios",
@@ -47,6 +50,18 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     "Fisioterapia pélvica",
     "¿Cómo gestionar la ansiedad?",
   ];
+  
+  final List<CategoriaChat> _categorias = [
+    const CategoriaChat(id: 'todos', nombre: 'Todos', icono: Icons.apps),
+    const CategoriaChat(id: 'sintomas', nombre: 'Síntomas y Dolor', icono: Icons.healing),
+    const CategoriaChat(id: 'nutricion', nombre: 'Nutrición', icono: Icons.restaurant),
+    const CategoriaChat(id: 'tratamientos', nombre: 'Tratamientos', icono: Icons.medical_services),
+    const CategoriaChat(id: 'bienestar', nombre: 'Calidad de Vida', icono: Icons.favorite),
+  ];
+  String _categoriaSeleccionada = 'todos';
+  
+  // Sugerencias en tiempo real mientras escribe
+  List<String> _sugerenciasTiempoReal = [];
   bool _isLoading = false;
 
   static String get _baseUrl {
@@ -60,6 +75,35 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   void initState() {
     super.initState();
     _cargarChatbotInicial();
+    _controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onTextChanged);
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final query = _controller.text.trim().toLowerCase();
+    if (query.isEmpty) {
+      setState(() {
+        _sugerenciasTiempoReal = [];
+      });
+      return;
+    }
+
+    final filtradas = _todasPreguntas
+        .where((item) => (item['pregunta'] ?? '').toString().toLowerCase().contains(query))
+        .map((item) => (item['pregunta'] ?? '').toString())
+        .take(4)
+        .toList();
+
+    setState(() {
+      _sugerenciasTiempoReal = filtradas;
+    });
   }
 
   Future<void> _cargarChatbotInicial() async {
@@ -77,14 +121,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         setState(() {
-          if (data['preguntas_frecuentes'] != null && (data['preguntas_frecuentes'] as List).isNotEmpty) {
-            _preguntasSugeridas = (data['preguntas_frecuentes'] as List)
+          if (data['preguntas_frecuentes'] != null) {
+            _todasPreguntas = List<Map<String, dynamic>>.from(data['preguntas_frecuentes']);
+            _preguntasSugeridas = _todasPreguntas
                 .map((item) => (item['pregunta'] ?? '').toString())
                 .where((p) => p.isNotEmpty)
+                .take(5)
                 .toList();
           }
           _messages.add(ChatMessage(
-            text: '¡Hola! Soy tu asistente experta en endometriosis. Estoy aquí para ayudarte con el manejo del dolor, brotes, nutrición antiinflamatoria, fisioterapia y bienestar posterior al diagnóstico. ¿Qué te gustaría consultar hoy?',
+            text: '¡Hola! Soy tu asistente experta en Endometriosis. Estoy aquí para ayudarte con el manejo del dolor, brotes, nutrición antiinflamatoria, fisioterapia y calidad de vida. ¿Qué te gustaría consultar hoy?',
             isUser: false,
           ));
         });
@@ -92,7 +138,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     } catch (_) {
       setState(() {
         _messages.add(ChatMessage(
-          text: '¡Hola! Soy tu asistente experta en endometriosis. ¿En qué puedo ayudarte hoy?',
+          text: '¡Hola! Soy tu asistente experta en Endometriosis. ¿En qué puedo ayudarte hoy?',
           isUser: false,
         ));
       });
@@ -108,6 +154,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _controller.clear();
     setState(() {
       _messages.add(ChatMessage(text: preguntaLimpia, isUser: true));
+      _sugerenciasTiempoReal = [];
       _isLoading = true;
     });
     _scrollToBottom();
@@ -127,7 +174,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         final respuestaBot = data['respuesta'] ?? 'No hay respuesta disponible.';
         final articuloJson = data['articulo_relacionado'];
         
-        // Como el Future de arriba puede tardar un pelín o podemos parsearlo directo:
         ContenidoEducativo? articuloParsed;
         if (articuloJson != null) {
           try {
@@ -148,16 +194,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         }
 
         setState(() {
-          if (data['preguntas_sugeridas'] != null && (data['preguntas_sugeridas'] as List).isNotEmpty) {
-            final nuevasSugerencias = (data['preguntas_sugeridas'] as List)
+          if (data['preguntas_sugeridas'] != null) {
+            _todasPreguntas = List<Map<String, dynamic>>.from(data['preguntas_sugeridas']);
+            _preguntasSugeridas = _todasPreguntas
                 .map((item) => (item['pregunta'] ?? '').toString())
                 .where((p) => p.isNotEmpty)
+                .take(5)
                 .toList();
-            if (nuevasSugerencias.length < 3) {
-              _preguntasSugeridas = _preguntasFijas.toList();
-            } else {
-              _preguntasSugeridas = nuevasSugerencias;
-            }
           }
           _messages.add(ChatMessage(
             text: respuestaBot,
@@ -201,11 +244,59 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Asistente Endometriosis'),
+        backgroundColor: const Color(0xFFF48FB1),
       ),
       body: Column(
         children: [
+          // 1. Chips Horizontales por Categoría con colores Rosa Pastel / Rosa Intenso
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            color: Colors.white,
+            child: SizedBox(
+              height: 42,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: _categorias.length,
+                itemBuilder: (context, index) {
+                  final cat = _categorias[index];
+                  final seleccionado = _categoriaSeleccionada == cat.id;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ChoiceChip(
+                      avatar: Icon(
+                        cat.icono,
+                        size: 16,
+                        color: seleccionado ? Colors.white : const Color(0xFFC2185B),
+                      ),
+                      label: Text(
+                        cat.nombre,
+                        style: TextStyle(
+                          color: seleccionado ? Colors.white : Colors.black87,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      selected: seleccionado,
+                      selectedColor: const Color(0xFFEC407A), // Rosa intenso
+                      backgroundColor: const Color(0xFFFCE4EC), // Rosa claro pastel
+                      onSelected: (bool selected) {
+                        setState(() {
+                          _categoriaSeleccionada = cat.id;
+                        });
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: Colors.black12),
+
+          // Historial del Chat
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -217,14 +308,40 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               },
             ),
           ),
+
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
-              child: LinearProgressIndicator(),
+              child: LinearProgressIndicator(color: Color(0xFFF48FB1)),
             ),
-          if (_preguntasSugeridas.isNotEmpty)
+
+          // 2. Sugerencias en tiempo real mientras escribe o chips rápidos
+          if (_sugerenciasTiempoReal.isNotEmpty)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 120),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _sugerenciasTiempoReal.length,
+                itemBuilder: (context, index) {
+                  final sug = _sugerenciasTiempoReal[index];
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.search, size: 18, color: Color(0xFFEC407A)),
+                    title: Text(sug, style: const TextStyle(fontSize: 13)),
+                    onTap: () => _enviarPregunta(sug),
+                  );
+                },
+              ),
+            ),
+
+          // Preguntas sugeridas por defecto cuando no escribe
+          if (_sugerenciasTiempoReal.isEmpty && _preguntasSugeridas.isNotEmpty)
             SizedBox(
-              height: 50,
+              height: 48,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
@@ -235,32 +352,39 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8.0, top: 4, bottom: 4),
                     child: ActionChip(
-                      avatar: const Icon(Icons.support_agent, size: 16, color: Color(0xFF8E44AD)),
+                      avatar: const Icon(Icons.lightbulb_outline, size: 16, color: Color(0xFFEC407A)),
                       label: Text(
                         preguntaTexto,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black87),
                       ),
-                      backgroundColor: Colors.white,
-                      elevation: 1,
+                      backgroundColor: const Color(0xFFFCE4EC),
+                      elevation: 0,
                       onPressed: () => _enviarPregunta(preguntaTexto),
                     ),
                   );
                 },
               ),
             ),
+
+          // Caja de texto inferior
           Container(
             padding: const EdgeInsets.all(8),
-            color: Theme.of(context).cardColor,
+            color: Colors.white,
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
                     textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Escribe tu consulta sobre endometriosis...',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     ),
                     onSubmitted: (val) => _enviarPregunta(val),
                   ),
@@ -268,7 +392,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.send),
-                  color: Theme.of(context).primaryColor,
+                  color: const Color(0xFFEC407A),
                   onPressed: () => _enviarPregunta(_controller.text),
                 ),
               ],
@@ -281,8 +405,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   Widget _buildMessageBubble(ChatMessage msg) {
     final isUser = msg.isUser;
-    const primaryColor = Color(0xFF8E44AD); // Tono morado representativo de endometriosis
-    const userBubbleColor = Color(0xFFE8DAEF);
+    const userBubbleColor = Color(0xFFFCE4EC); // Rosa pastel claro para usuaria
+    const botBubbleColor = Color(0xFFF5F5F5);
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -291,34 +415,38 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         padding: const EdgeInsets.all(12),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
         decoration: BoxDecoration(
-          color: isUser ? userBubbleColor : Colors.grey.shade200,
+          color: isUser ? userBubbleColor : botBubbleColor,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isUser ? const Color(0xFFF48FB1).withOpacity(0.4) : Colors.transparent,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               msg.text,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.black87,
                 fontSize: 14,
               ),
             ),
+            // 3. Respuesta Guiada con Enlace Educativo estilizado en rosa de la app
             if (msg.articuloRelacionado != null) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: primaryColor.withOpacity(0.3)),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFF48FB1)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.article, size: 16, color: primaryColor),
+                        const Icon(Icons.school_outlined, size: 16, color: Color(0xFFEC407A)),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -326,7 +454,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
-                              color: primaryColor,
+                              color: Color(0xFFC2185B),
                             ),
                           ),
                         ),
@@ -339,14 +467,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(50, 30),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF48FB1),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         onPressed: () {
                           Navigator.push(
@@ -359,7 +489,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                           );
                         },
                         child: const Text(
-                          'Leer artículo completo →',
+                          'Leer artículo completo en Módulo Educativo',
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),

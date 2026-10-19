@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/profesional.dart';
 import '../models/disponibilidad_slot.dart';
 import '../models/cita_medica.dart';
+import '../models/producto.dart';
 
 class BienestarService {
   static String get baseUrl {
@@ -112,4 +113,60 @@ class BienestarService {
     );
     return response.statusCode == 200 || response.statusCode == 201;
   }
+
+  // --- TIENDA VIRTUAL ---
+  static Future<List<Producto>> obtenerProductos() async {
+    final response = await http.get(Uri.parse('$baseUrl/productos/'));
+    if (response.statusCode != 200) {
+      throw Exception('Error al cargar la tienda de bienestar');
+    }
+    final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+    return lista.map((e) => Producto.fromJson(e)).toList();
+  }
+
+  static Future<List<ItemCarrito>> obtenerCarrito({required String token}) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/carrito/'),
+      headers: _headers(token: token),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Error al cargar el carrito');
+    }
+    final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+    return lista.map((e) => ItemCarrito.fromJson(e)).toList();
+  }
+
+  static Future<void> agregarAlCarrito({required int productoId, required int cantidad, required String token}) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/carrito/'),
+      headers: _headers(token: token),
+      body: jsonEncode({'producto': productoId, 'cantidad': cantidad}),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Error al agregar producto al carrito');
+    }
+  }
+
+  static Future<void> eliminarItemCarrito({required int itemId, required String token}) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/carrito/$itemId/'),
+      headers: _headers(token: token),
+    );
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Error al eliminar item del carrito');
+    }
+  }
+
+  static Future<Map<String, dynamic>> confirmarCompra({required String token}) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/compras/confirmar/'),
+      headers: _headers(token: token),
+    );
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final err = jsonDecode(response.body);
+      throw Exception(err['error'] ?? 'Error al confirmar la compra');
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+  }
 }
+

@@ -12,6 +12,7 @@ import 'features/seguimiento/presentation/screens/perfil_screen.dart';
 import 'features/comunidad/presentation/screens/comunidad_feed_screen.dart';
 import 'features/bienestar/presentation/screens/profesionales_screen.dart';
 import 'features/bienestar/presentation/screens/mis_citas_screen.dart';
+import 'features/bienestar/presentation/screens/tienda_screen.dart';
 import 'features/seguimiento/presentation/screens/reportes_screen.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -897,34 +898,7 @@ class StoreTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const CommercialAdCard(),
-        const SizedBox(height: 16),
-        const Text(
-          'Productos de Bienestar',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
-        ),
-        const SizedBox(height: 10),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.local_fire_department, color: AppColors.primary, size: 36),
-            title: const Text('Bolsa Térmica de Alivio'),
-            subtitle: const Text('Calor enfocado para dolor pélvico.'),
-            trailing: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const CommercialAdScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
-              child: const Text('Ver'),
-            ),
-          ),
-        ),
-      ],
-    );
+    return const TiendaScreen();
   }
 }
 
@@ -971,7 +945,10 @@ class CommercialAdCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CommercialAdScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const TiendaScreen()),
+        );
       },
       child: Card(
         elevation: 6,
