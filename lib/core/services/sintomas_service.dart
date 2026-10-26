@@ -8,6 +8,7 @@ import '../../features/seguimiento/models/registro_emocional.dart';
 import '../../features/seguimiento/models/progreso_gamificacion.dart';
 import '../../features/seguimiento/models/registro_ciclo.dart';
 import '../../features/seguimiento/models/historial_sintoma.dart';
+
 /// Cliente HTTP para /api/sintomas/ (catálogos y registros de síntomas).
 class SintomasService {
   SintomasService._();
@@ -83,6 +84,15 @@ class SintomasService {
         'sintomas_asociados':
             registro.sintomasAsociados.map((s) => int.parse(s.id)).toList(),
         if (registro.observacion != null) 'observacion': registro.observacion,
+        // Campos opcionales: solo se envían si la usuaria los respondió.
+        if (registro.otrosTiposDolor != null)
+          'otros_tipos_dolor': registro.otrosTiposDolor,
+        if (registro.tomoMedicacion != null)
+          'tomo_medicacion': registro.tomoMedicacion,
+        if (registro.medicacionDetalle != null)
+          'medicacion_detalle': registro.medicacionDetalle,
+        if (registro.alivioMedicacion != null)
+          'alivio_medicacion': registro.alivioMedicacion,
       }),
     );
 
@@ -91,7 +101,7 @@ class SintomasService {
     }
   }
 
-    static Future<RegistroEmocional?> obtenerCheckInHoy(String token) async {
+  static Future<RegistroEmocional?> obtenerCheckInHoy(String token) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/registros-emocionales/hoy/'),
       headers: _headers(token),
@@ -100,13 +110,23 @@ class SintomasService {
     if (response.statusCode != 200) {
       throw Exception('No se pudo consultar el check-in de hoy.');
     }
-    return RegistroEmocional.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    return RegistroEmocional.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
   }
 
+  /// Guarda (o actualiza, si ya hay uno de hoy) el check-in. Los campos
+  /// opcionales se mandan siempre, con null cuando la usuaria no los
+  /// eligió: así, al editar el check-in, también puede borrar una respuesta.
   static Future<RegistroEmocional> guardarCheckIn({
     required String token,
     required int estadoAnimo,
     String? notaLibre,
+    int? energia,
+    int? horasSueno,
+    int? descanso,
+    int? estres,
+    String? capacidadDia,
   }) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/registros-emocionales/'),
@@ -115,47 +135,56 @@ class SintomasService {
         'estado_animo': estadoAnimo,
         if (notaLibre != null && notaLibre.trim().isNotEmpty)
           'nota_libre': notaLibre.trim(),
+        'energia': energia,
+        'horas_sueno': horasSueno,
+        'descanso': descanso,
+        'estres': estres,
+        'capacidad_dia': capacidadDia,
       }),
     );
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('No se pudo guardar el check-in.');
     }
-    return RegistroEmocional.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    return RegistroEmocional.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
   }
-     /// Todos los check-ins emocionales de la usuaria (para Reportes).
-    static Future<List<RegistroEmocional>> obtenerCheckIns(String token) async {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/registros-emocionales/'),
-        headers: _headers(token),
-      );
-      if (response.statusCode != 200) {
-        throw Exception('No se pudo cargar tu historial de ánimo.');
-      }
-      final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
-      final registros = lista
-          .map((e) => RegistroEmocional.fromJson(e as Map<String, dynamic>))
-          .toList();
-      registros.sort((a, b) => a.fecha.compareTo(b.fecha));
-      return registros;
-    }
-      /// Todos los registros de síntomas de la usuaria, del más antiguo al más reciente.
-    static Future<List<HistorialSintoma>> obtenerHistorialSintomas(String token) async {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/registros-sintoma/'),
-        headers: _headers(token),
-      );
-      if (response.statusCode != 200) {
-        throw Exception('No se pudo cargar tu historial de síntomas.');
-      }
-      final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
-      final registros = lista
-          .map((e) => HistorialSintoma.fromJson(e as Map<String, dynamic>))
-          .toList();
-      registros.sort((a, b) => a.fechaHora.compareTo(b.fechaHora));
-      return registros;
-    }
 
-    static Future<ProgresoGamificacion> obtenerProgreso(String token) async {
+  /// Todos los check-ins emocionales de la usuaria (para Reportes).
+  static Future<List<RegistroEmocional>> obtenerCheckIns(String token) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/registros-emocionales/'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('No se pudo cargar tu historial de ánimo.');
+    }
+    final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+    final registros = lista
+        .map((e) => RegistroEmocional.fromJson(e as Map<String, dynamic>))
+        .toList();
+    registros.sort((a, b) => a.fecha.compareTo(b.fecha));
+    return registros;
+  }
+
+  /// Todos los registros de síntomas de la usuaria, del más antiguo al más reciente.
+  static Future<List<HistorialSintoma>> obtenerHistorialSintomas(String token) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/registros-sintoma/'),
+      headers: _headers(token),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('No se pudo cargar tu historial de síntomas.');
+    }
+    final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+    final registros = lista
+        .map((e) => HistorialSintoma.fromJson(e as Map<String, dynamic>))
+        .toList();
+    registros.sort((a, b) => a.fechaHora.compareTo(b.fechaHora));
+    return registros;
+  }
+
+  static Future<ProgresoGamificacion> obtenerProgreso(String token) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/gamificacion/'),
       headers: _headers(token),
@@ -168,7 +197,7 @@ class SintomasService {
     );
   }
 
-    static String _fechaApi(DateTime fecha) =>
+  static String _fechaApi(DateTime fecha) =>
       fecha.toIso8601String().split('T').first;
 
   static Map<String, dynamic> _cuerpoCiclo(

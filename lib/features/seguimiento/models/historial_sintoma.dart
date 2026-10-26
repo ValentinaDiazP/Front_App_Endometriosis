@@ -9,6 +9,10 @@ class HistorialSintoma {
   final List<String> localizaciones;
   final List<String> sintomasAsociados;
   final String? observacion;
+  final String? otrosTiposDolor;
+  final bool? tomoMedicacion;
+  final String? medicacionDetalle;
+  final String? alivioMedicacion; // nada | algo | mucho
 
   const HistorialSintoma({
     required this.id,
@@ -17,6 +21,10 @@ class HistorialSintoma {
     required this.localizaciones,
     required this.sintomasAsociados,
     this.observacion,
+    this.otrosTiposDolor,
+    this.tomoMedicacion,
+    this.medicacionDetalle,
+    this.alivioMedicacion,
   });
 
   factory HistorialSintoma.fromJson(Map<String, dynamic> json) {
@@ -36,6 +44,10 @@ class HistorialSintoma {
           .map((e) => e['nombre'] as String)
           .toList(),
       observacion: json['observacion'] as String?,
+      otrosTiposDolor: json['otros_tipos_dolor'] as String?,
+      tomoMedicacion: json['tomo_medicacion'] as bool?,
+      medicacionDetalle: json['medicacion_detalle'] as String?,
+      alivioMedicacion: json['alivio_medicacion'] as String?,
     );
   }
 }

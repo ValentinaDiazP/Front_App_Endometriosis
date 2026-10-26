@@ -9,6 +9,10 @@ import 'sintoma_asociado.dart';
 /// `localizaciones` es una lista (no un solo valor) porque el dolor puede
 /// presentarse en varias zonas a la vez. `localizacionOtroDetalle` solo
 /// tiene valor cuando `localizaciones` incluye la opción "Otro".
+///
+/// Los campos de "otros tipos de dolor" y medicación son opcionales y solo
+/// se llenan cuando hubo dolor. La app solo ANOTA lo que la usuaria tomó;
+/// nunca recomienda medicamentos ni dosis.
 class RegistroSintoma {
   final String id;
   final String usuarioId;
@@ -18,6 +22,10 @@ class RegistroSintoma {
   final String? localizacionOtroDetalle;
   final List<SintomaAsociado> sintomasAsociados;
   final String? observacion;
+  final String? otrosTiposDolor;
+  final bool? tomoMedicacion; // null = no respondió
+  final String? medicacionDetalle;
+  final String? alivioMedicacion; // nada | algo | mucho
 
   const RegistroSintoma({
     required this.id,
@@ -28,6 +36,10 @@ class RegistroSintoma {
     this.localizacionOtroDetalle,
     required this.sintomasAsociados,
     this.observacion,
+    this.otrosTiposDolor,
+    this.tomoMedicacion,
+    this.medicacionDetalle,
+    this.alivioMedicacion,
   }) : assert(
           intensidadDolor >= 0 && intensidadDolor <= 10,
           'La intensidad de dolor debe estar entre 0 y 10',
@@ -47,6 +59,10 @@ class RegistroSintoma {
           .map((e) => SintomaAsociado.fromJson(e as Map<String, dynamic>))
           .toList(),
       observacion: json['observacion'] as String?,
+      otrosTiposDolor: json['otrosTiposDolor'] as String?,
+      tomoMedicacion: json['tomoMedicacion'] as bool?,
+      medicacionDetalle: json['medicacionDetalle'] as String?,
+      alivioMedicacion: json['alivioMedicacion'] as String?,
     );
   }
 
@@ -60,6 +76,10 @@ class RegistroSintoma {
       'localizacionOtroDetalle': localizacionOtroDetalle,
       'sintomasAsociados': sintomasAsociados.map((s) => s.toJson()).toList(),
       'observacion': observacion,
+      'otrosTiposDolor': otrosTiposDolor,
+      'tomoMedicacion': tomoMedicacion,
+      'medicacionDetalle': medicacionDetalle,
+      'alivioMedicacion': alivioMedicacion,
     };
   }
 }

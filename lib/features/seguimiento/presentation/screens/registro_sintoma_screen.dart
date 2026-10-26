@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/services/sintomas_service.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../models/informacion_personal.dart';
 import '../../models/localizacion_dolor.dart';
 import '../../models/registro_sintoma.dart';
@@ -11,10 +12,13 @@ import '../widgets/sintoma_chip.dart';
 /// Segunda pestaña de Seguimiento: registra localización(es) del dolor,
 /// intensidad, síntomas asociados y observación, contra la API real.
 ///
-/// Los catálogos (localizaciones, síntomas) ya no vienen de mock — se
-/// cargan desde el backend al abrir la pantalla. "Otro" y "Ninguno" siguen
-/// siendo un truco del frontend (no existen en la base de datos), así que
-/// se agregan a mano después de traer el catálogo real.
+/// Si hay dolor (alguna zona distinta de "Ninguno") se muestran además
+/// "Otros tipos de dolor" (texto abierto) y la medicación. Si no hay dolor,
+/// esas preguntas se ocultan y la intensidad queda deshabilitada.
+///
+/// Los catálogos (localizaciones, síntomas) se cargan desde el backend al
+/// abrir la pantalla. "Otro" y "Ninguno" son un truco del frontend (no
+/// existen en la base de datos), así que se agregan a mano después.
 class RegistroSintomaScreen extends StatefulWidget {
   final InformacionPersonal informacionPersonal;
   final String token;
@@ -39,6 +43,10 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
   final Set<SintomaAsociado> _sintomasSeleccionados = {};
   final _observacionController = TextEditingController();
   final _otroController = TextEditingController();
+  final _otrosTiposController = TextEditingController();
+  final _medicacionController = TextEditingController();
+  bool? _tomoMedicacion; // null = no respondió
+  String? _alivio; // nada | algo | mucho
 
   List<LocalizacionDolor> _localizacionesCatalogo = [];
   List<SintomaAsociado> _sintomasCatalogo = [];
@@ -84,11 +92,16 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
   void dispose() {
     _observacionController.dispose();
     _otroController.dispose();
+    _otrosTiposController.dispose();
+    _medicacionController.dispose();
     super.dispose();
   }
 
   bool get _dolorHabilitado =>
       _localizacionesSeleccionadas.any((l) => !l.esNinguno);
+
+  bool get _marcoNinguno =>
+      _localizacionesSeleccionadas.any((l) => l.esNinguno);
 
   void _toggleLocalizacion(LocalizacionDolor localizacion) {
     setState(() {
@@ -127,6 +140,11 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
     });
   }
 
+  String? _textoONull(String texto) {
+    final limpio = texto.trim();
+    return limpio.isEmpty ? null : limpio;
+  }
+
   Future<void> _guardarRegistro() async {
     if (_localizacionesSeleccionadas.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -145,6 +163,10 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
       return;
     }
 
+    // Otros tipos de dolor y medicación solo aplican si hubo dolor.
+    final hayDolor = _dolorHabilitado;
+    final tomo = hayDolor ? _tomoMedicacion : null;
+
     final registro = RegistroSintoma(
       id: 'pendiente', // el id real lo asigna el backend al guardar
       usuarioId: widget.informacionPersonal.usuarioId,
@@ -154,9 +176,13 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
       localizacionOtroDetalle:
           incluyeOtro ? _otroController.text.trim() : null,
       sintomasAsociados: _sintomasSeleccionados.toList(),
-      observacion: _observacionController.text.trim().isEmpty
-          ? null
-          : _observacionController.text.trim(),
+      observacion: _textoONull(_observacionController.text),
+      otrosTiposDolor:
+          hayDolor ? _textoONull(_otrosTiposController.text) : null,
+      tomoMedicacion: tomo,
+      medicacionDetalle:
+          tomo == true ? _textoONull(_medicacionController.text) : null,
+      alivioMedicacion: tomo == true ? _alivio : null,
     );
 
     setState(() => _guardando = true);
@@ -221,7 +247,85 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
       _sintomasSeleccionados.clear();
       _observacionController.clear();
       _otroController.clear();
+      _otrosTiposController.clear();
+      _medicacionController.clear();
+      _tomoMedicacion = null;
+      _alivio = null;
     });
+  }
+
+  Widget _seccionDolor(BuildContext context) {
+    final titulo = Theme.of(context).textTheme.titleMedium;
+    final ayuda = Theme.of(context).textTheme.bodySmall;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Text('Otros tipos de dolor', style: titulo),
+        const SizedBox(height: 4),
+        Text(
+          'Escribe los que sentiste. Le ayudan a tu médica a entender tu caso. '
+          '(Ejemplo: al orinar, al tener relaciones sexuales, …)',
+          style: ayuda,
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _otrosTiposController,
+          maxLength: 300,
+          minLines: 2,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'Opcional',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text('¿Tomaste algo para el dolor?', style: titulo),
+        const SizedBox(height: 8),
+        SegmentedButton<bool>(
+          emptySelectionAllowed: true,
+          segments: const [
+            ButtonSegment(value: true, label: Text('Sí')),
+            ButtonSegment(value: false, label: Text('No')),
+          ],
+          selected: _tomoMedicacion == null ? <bool>{} : {_tomoMedicacion!},
+          onSelectionChanged: (s) =>
+              setState(() => _tomoMedicacion = s.isEmpty ? null : s.first),
+        ),
+        if (_tomoMedicacion == true) ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: _medicacionController,
+            maxLength: 200,
+            decoration: const InputDecoration(
+              labelText: '¿Qué tomaste? (por ejemplo: ibuprofeno)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text('¿Te ayudó?', style: titulo),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            emptySelectionAllowed: true,
+            segments: const [
+              ButtonSegment(value: 'nada', label: Text('Nada')),
+              ButtonSegment(value: 'algo', label: Text('Algo')),
+              ButtonSegment(value: 'mucho', label: Text('Mucho')),
+            ],
+            selected: _alivio == null ? <String>{} : {_alivio!},
+            onSelectionChanged: (s) =>
+                setState(() => _alivio = s.isEmpty ? null : s.first),
+          ),
+        ],
+        const SizedBox(height: 8),
+        Text(
+          'Solo anotamos lo que tomaste. No es una recomendación: '
+          'consulta con tu médica antes de cambiar algo.',
+          style: ayuda,
+        ),
+      ],
+    );
   }
 
   @override
@@ -306,6 +410,21 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
               );
             }).toList(),
           ),
+          if (_dolorHabilitado) _seccionDolor(context),
+          if (_marcoNinguno) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Como hoy no tuviste dolor, te saltamos las preguntas sobre '
+                'otros tipos de dolor y medicación.',
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           TextField(
             controller: _observacionController,
@@ -329,6 +448,13 @@ class _RegistroSintomaScreenState extends State<RegistroSintomaScreen> {
                   )
                 : const Text('Guardar registro'),
           ),
+          const SizedBox(height: 10),
+          Text(
+            'Guardar un registro, también sin dolor, cuenta para tu racha.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
