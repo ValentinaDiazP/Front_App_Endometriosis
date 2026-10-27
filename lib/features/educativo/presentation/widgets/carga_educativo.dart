@@ -28,7 +28,9 @@ class _CargaEducativoState extends State<CargaEducativo> {
   late Future<void> _carga = EducativoRepository.asegurarCargado(widget.token);
 
   void _reintentar() {
-    setState(() => _carga = EducativoRepository.asegurarCargado(widget.token));
+    setState(() {
+      _carga = EducativoRepository.asegurarCargado(widget.token);
+    });
   }
 
   String _mensaje(Object? error) {

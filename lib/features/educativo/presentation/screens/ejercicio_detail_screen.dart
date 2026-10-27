@@ -5,6 +5,7 @@ import '../../models/ejercicio_psicoeducativo.dart';
 import '../../models/modulo_psicoeducativo.dart';
 import '../widgets/boton_recurso_externo.dart';
 import '../widgets/progreso_modulo_mini.dart';
+import '../widgets/tarjeta_premium.dart';
 import '../../../../core/theme/app_theme.dart';
 import 'ejercicio_catastrofizacion_screen.dart';
 import 'ejercicio_tcc_screen.dart';
@@ -123,7 +124,14 @@ class _EjercicioDetailScreenState extends State<EjercicioDetailScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    ...switch (_formato) {
+                    // Premium y la usuaria es gratuita: el backend no manda las
+                    // instrucciones y no deja completarlo.
+                    if (ejercicio.bloqueado)
+                      const TarjetaPremium(
+                        descripcion: 'Este ejercicio guiado es parte de Premium. Con Premium '
+                            'accedes a todos los ejercicios interactivos del módulo.',
+                      )
+                    else ...switch (_formato) {
                       _Formato.modulo => _contenidoModulo(modulo!),
                       _Formato.tcc => _contenidoInteractivo(ejercicio, const [
                           'Describes una situación difícil reciente.',
@@ -185,6 +193,13 @@ class _EjercicioDetailScreenState extends State<EjercicioDetailScreen> {
 
   Widget _botonPrincipal() {
     final ejercicio = widget.ejercicio;
+    if (ejercicio.bloqueado) {
+      return FilledButton.icon(
+        onPressed: () => mostrarPlanesProximamente(context),
+        icon: const Icon(Icons.lock_outline),
+        label: const Text('Disponible con Premium'),
+      );
+    }
     switch (_formato) {
       case _Formato.modulo:
         return FilledButton.icon(

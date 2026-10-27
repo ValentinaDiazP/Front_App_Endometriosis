@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../data/educativo_repository.dart';
 import '../../models/contenido_educativo.dart';
+import '../../services/educativo_service.dart' show PremiumRequeridoException;
 import '../widgets/boton_recurso_externo.dart';
+import '../widgets/tarjeta_premium.dart';
 import '../widgets/nivel_badge.dart';
 
 /// Detalle de un ítem de la biblioteca. Recibe el [ContenidoEducativo] ya
@@ -26,14 +28,17 @@ class _ContenidoDetailScreenState extends State<ContenidoDetailScreen> {
   Future<void> _marcarComoLeido() async {
     setState(() => _guardando = true);
     try {
-      // Crea la InteraccionContenido (completado = true) en el backend.
-      // TODO(backend): sumar puntos de gamificación.
+      // Crea la InteraccionContenido (completado = true) en el backend; los
+      // puntos los suma el motor de aprendizaje.
       await EducativoRepository.marcarContenidoCompletado(widget.contenido.idContenido);
       if (!mounted) return;
       setState(() => _completado = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Marcado como leído')),
       );
+    } on PremiumRequeridoException {
+      if (!mounted) return;
+      mostrarPlanesProximamente(context);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,44 +77,65 @@ class _ContenidoDetailScreenState extends State<ContenidoDetailScreen> {
                   ],
                 ),
               ),
-            Row(
+            // Wrap (no Row) para que "Premium" baje de línea en pantallas
+            // angostas en vez de salirse.
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 NivelBadge(nivel: contenido.nivel),
-                const SizedBox(width: 8),
-                Icon(Icons.timer_outlined, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text('${contenido.minutosEstimados} min de lectura/reproducción'),
-                if (contenido.esPremium) ...[
-                  const SizedBox(width: 8),
-                  const Icon(Icons.workspace_premium, size: 18, color: Color(0xFFE98BA0)),
-                  const Text(' Premium', style: TextStyle(color: Color(0xFFE98BA0))),
-                ],
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.timer_outlined, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text('${contenido.minutosEstimados} min de lectura/reproducción'),
+                  ],
+                ),
+                if (contenido.esPremium)
+                  const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.workspace_premium, size: 18, color: Color(0xFFE98BA0)),
+                      Text(' Premium', style: TextStyle(color: Color(0xFFE98BA0))),
+                    ],
+                  ),
               ],
             ),
             const SizedBox(height: 16),
             Text(contenido.resumen, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
-            // Si el contenido tiene un video o podcast externo, se abre en
-            // su app (YouTube, Spotify…). El enlace se carga desde el admin.
-            if (contenido.urlRecurso != null) ...[
-              BotonRecursoExterno(
-                url: contenido.urlRecurso!,
-                esAudio: contenido.tipo == TipoContenido.audio,
+            // Premium y la usuaria es gratuita: el backend no manda el cuerpo
+            // ni el enlace, así que en su lugar va la invitación a Premium.
+            if (contenido.bloqueado)
+              const TarjetaPremium(
+                descripcion: 'Este contenido es parte de Premium. Con Premium accedes a '
+                    'todos los contenidos avanzados y ejercicios guiados del módulo.',
+              )
+            else ...[
+              // Si el contenido tiene un video o podcast externo, se abre en
+              // su app (YouTube, Spotify…). El enlace se carga desde el admin.
+              if (contenido.urlRecurso != null) ...[
+                BotonRecursoExterno(
+                  url: contenido.urlRecurso!,
+                  esAudio: contenido.tipo == TipoContenido.audio,
+                ),
+                const SizedBox(height: 16),
+              ],
+              // Por ahora el cuerpo se muestra como texto plano (más adelante
+              // podría ir formateado con markdown/rich text).
+              Text(contenido.cuerpo),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _completado || _guardando ? null : _marcarComoLeido,
+                  icon: Icon(_completado ? Icons.check_circle : Icons.check_circle_outline),
+                  label: Text(_completado ? 'Ya completado' : 'Marcar como leído'),
+                ),
               ),
-              const SizedBox(height: 16),
             ],
-            // Por ahora el cuerpo se muestra como texto plano (más adelante
-            // podría ir formateado con markdown/rich text).
-            Text(contenido.cuerpo),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _completado || _guardando ? null : _marcarComoLeido,
-                icon: Icon(_completado ? Icons.check_circle : Icons.check_circle_outline),
-                label: Text(_completado ? 'Ya completado' : 'Marcar como leído'),
-              ),
-            ),
           ],
         ),
       ),
