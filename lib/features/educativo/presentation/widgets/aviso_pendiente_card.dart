@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../data/educativo_repository.dart';
 import '../../data/gestor_contenido.dart';
 import '../../educativo_routes.dart';
 import '../../models/contenido_educativo.dart';
@@ -6,13 +7,24 @@ import '../../models/ejercicio_psicoeducativo.dart';
 import '../../../../core/theme/app_theme.dart';
 
 /// Aviso que muestra la recomendación del [GestorContenidoEducativo]:
-/// "Tienes pendiente terminar: <actividad>". Al tocarlo, lleva directo a la
+/// "Tienes pendiente terminar: `actividad`". Al tocarlo, lleva directo a la
 /// pantalla de esa actividad. Si no hay nada pendiente, no se muestra nada.
+///
+/// Escucha [EducativoRepository.cambiosProgreso] para actualizarse en cuanto
+/// la usuaria completa algo (se usa como `const`, así que no basta con que
+/// la pantalla que lo contiene se reconstruya).
 class AvisoPendienteCard extends StatelessWidget {
   const AvisoPendienteCard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: EducativoRepository.cambiosProgreso,
+      builder: (context, _, __) => _buildAviso(context),
+    );
+  }
+
+  Widget _buildAviso(BuildContext context) {
     final recomendacion = GestorContenidoEducativo.siguientePendiente();
     if (recomendacion == null) return const SizedBox.shrink();
 

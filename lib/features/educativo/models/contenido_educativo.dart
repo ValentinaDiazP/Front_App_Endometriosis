@@ -24,6 +24,10 @@ class ContenidoEducativo {
   /// Enlace opcional a un video o podcast externo (YouTube, Spotify…).
   final String? urlRecurso;
 
+  /// Premium y la usuaria no lo es: el backend no manda el cuerpo ni el
+  /// enlace, y no deja marcarlo como leído.
+  final bool bloqueado;
+
   const ContenidoEducativo({
     required this.idContenido,
     required this.idCategoriaFK,
@@ -36,5 +40,6 @@ class ContenidoEducativo {
     required this.cuerpo,
     required this.minutosEstimados,
     this.urlRecurso,
+    this.bloqueado = false,
   });
 }

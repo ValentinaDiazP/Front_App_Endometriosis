@@ -1,7 +1,6 @@
 import '../models/contenido_educativo.dart';
 import '../models/ejercicio_psicoeducativo.dart';
 import 'educativo_repository.dart';
-import 'senales_seguimiento_mock.dart';
 
 /// Resultado de la recomendación: qué actividad pendiente mostrarle a la
 /// usuaria y de qué tipo es (para saber a qué pantalla llevarla si toca el
@@ -40,8 +39,11 @@ class ContenidoPriorizado {
 ///
 /// Decide con los datos que EducativoRepository trae del backend (el primer
 /// contenido/ejercicio sin completar según InteraccionContenido y
-/// RegistroEjercicio). Las señales de seguimiento (dolor, ánimo) aún son
-/// mock: ver SenalesSeguimientoMock.
+/// RegistroEjercicio). Nunca sugiere algo bloqueado por Premium.
+///
+/// Las recomendaciones de "Para ti" las calcula el backend con los datos de
+/// Seguimiento (GET /recomendaciones/); [contenidosPriorizados] queda solo
+/// como respaldo si esa consulta falla.
 class GestorContenidoEducativo {
   GestorContenidoEducativo._();
 
@@ -51,7 +53,7 @@ class GestorContenidoEducativo {
   static RecomendacionPendiente? siguientePendiente() {
     final ContenidoEducativo? contenidoPendiente =
         EducativoRepository.contenidos.cast<ContenidoEducativo?>().firstWhere(
-              (c) => !EducativoRepository.contenidoCompletado(c!.idContenido),
+              (c) => !c!.bloqueado && !EducativoRepository.contenidoCompletado(c.idContenido),
               orElse: () => null,
             );
 
@@ -67,7 +69,7 @@ class GestorContenidoEducativo {
         .ejercicios
         .cast<EjercicioPsicoeducativo?>()
         .firstWhere(
-          (e) => !EducativoRepository.ejercicioCompletado(e!.idEjercicio),
+          (e) => !e!.bloqueado && !EducativoRepository.ejercicioCompletado(e.idEjercicio),
           orElse: () => null,
         );
 
@@ -86,12 +88,11 @@ class GestorContenidoEducativo {
   // Personalización: contenido priorizado / filtrado.
   // ---------------------------------------------------------------------
 
-  /// Devuelve los contenidos ordenados del más al menos relevante para la
-  /// usuaria. Reglas (simples y explicables, se pueden ajustar sin tocar la UI):
+  /// Respaldo local de "Para ti" si el backend no responde: ordena solo por
+  /// preferencias (sin datos de Seguimiento).
   ///  +3  la categoría del contenido está entre sus preferencias.
-  ///  +2  señal de Seguimiento: dolor alto esta semana -> "Dolor crónico".
-  ///  +2  señal de Seguimiento: ánimo bajo esta semana -> "Autocuidado".
-  ///  -5  ya lo completó (baja al final para priorizar lo nuevo).
+  ///  -2  está bloqueado por Premium.
+  ///  -10 ya lo completó (baja al final para priorizar lo nuevo).
   /// Empates: primero los de nivel más básico.
   ///
   /// Si [soloPreferidos] es true y la usuaria tiene preferencias, se
@@ -115,17 +116,11 @@ class GestorContenidoEducativo {
         final categoria = EducativoRepository.categoriaPorId(c.idCategoriaFK);
         motivos.add('Porque te interesa ${categoria?.nombre ?? 'este tema'}');
       }
-      if (SenalesSeguimientoMock.dolorAlto && c.idCategoriaFK == 'cat_dolor') {
-        puntaje += 2;
-        motivos.add('Registraste dolor alto esta semana');
-      }
-      if (SenalesSeguimientoMock.animoBajo &&
-          c.idCategoriaFK == 'cat_autocuidado') {
-        puntaje += 2;
-        motivos.add('Tu ánimo ha estado bajo esta semana');
+      if (c.bloqueado) {
+        puntaje -= 2;
       }
       if (EducativoRepository.contenidoCompletado(c.idContenido)) {
-        puntaje -= 5;
+        puntaje -= 10;
       }
 
       return ContenidoPriorizado(

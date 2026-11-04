@@ -4,7 +4,18 @@ import 'package:http/http.dart' as http;
 import '../models/categoria_contenido.dart';
 import '../models/contenido_educativo.dart';
 import '../models/ejercicio_psicoeducativo.dart';
+import '../models/progreso_aprendizaje.dart';
+import '../models/recomendaciones_educativas.dart';
 import '../models/ruta_aprendizaje.dart';
+
+/// El backend respondió 403: el contenido o ejercicio es premium y la
+/// usuaria tiene plan gratuito.
+class PremiumRequeridoException implements Exception {
+  const PremiumRequeridoException();
+
+  @override
+  String toString() => 'Este recurso es parte de Premium.';
+}
 
 /// Todo lo que el módulo necesita al entrar: catálogo + datos de la usuaria.
 class DatosEducativos {
@@ -105,7 +116,10 @@ class EducativoService {
     }
   }
 
-  static Future<void> marcarContenidoCompletado(String token, String idContenido) async {
+  /// Devuelve la recompensa del motor de aprendizaje (null si el backend no
+  /// la mandó, p. ej. si el contenido ya estaba leído).
+  static Future<ResultadoGamificacion?> marcarContenidoCompletado(
+      String token, String idContenido) async {
     final response = await http
         .post(
           Uri.parse('$_baseUrl/interacciones-contenido/'),
@@ -113,14 +127,16 @@ class EducativoService {
           body: jsonEncode({'contenido': idContenido, 'completado': true}),
         )
         .timeout(const Duration(seconds: 15));
+    if (response.statusCode == 403) throw const PremiumRequeridoException();
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('No se pudo guardar tu progreso. Intenta de nuevo.');
     }
+    return _gamificacion(response);
   }
 
   /// [respuestas] y [utilidad] (1 a 5) son opcionales: los ejercicios
   /// interactivos (TCC, ACT/Mindfulness) los envían; los demás no.
-  static Future<void> registrarEjercicio(
+  static Future<ResultadoGamificacion?> registrarEjercicio(
     String token,
     String idEjercicio, {
     String? respuestas,
@@ -137,9 +153,38 @@ class EducativoService {
           }),
         )
         .timeout(const Duration(seconds: 15));
+    if (response.statusCode == 403) throw const PremiumRequeridoException();
     if (response.statusCode != 201) {
       throw Exception('No se pudo guardar el ejercicio. Intenta de nuevo.');
     }
+    return _gamificacion(response);
+  }
+
+  /// Lee el bloque `gamificacion` de la respuesta de un POST. Si falta o no
+  /// se puede leer, devuelve null: nunca debe romper el guardado.
+  static ResultadoGamificacion? _gamificacion(http.Response response) {
+    try {
+      final cuerpo = jsonDecode(utf8.decode(response.bodyBytes));
+      final bloque = (cuerpo as Map<String, dynamic>)['gamificacion'];
+      if (bloque == null) return null;
+      return ResultadoGamificacion.fromJson(bloque as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Puntos, nivel, racha e insignias de la usuaria (GET /progreso/).
+  static Future<ProgresoAprendizaje> obtenerProgreso(String token) async {
+    final json = await _get(token, 'progreso/');
+    return ProgresoAprendizaje.fromJson(json as Map<String, dynamic>);
+  }
+
+  /// Contenidos y ejercicios ordenados para la usuaria, calculados en el
+  /// backend con sus preferencias, su progreso y sus datos de Seguimiento
+  /// (GET /recomendaciones/).
+  static Future<RecomendacionesEducativas> obtenerRecomendaciones(String token) async {
+    final json = await _get(token, 'recomendaciones/');
+    return RecomendacionesEducativas.fromJson(json as Map<String, dynamic>);
   }
 
   // ---------------------------------------------------------------------
@@ -171,6 +216,7 @@ class EducativoService {
         cuerpo: j['cuerpo'] as String,
         minutosEstimados: j['minutos_estimados'] as int,
         urlRecurso: _url(j['url_recurso']),
+        bloqueado: (j['bloqueado'] as bool?) ?? false,
       );
 
   static EjercicioPsicoeducativo _ejercicio(dynamic j) => EjercicioPsicoeducativo(
@@ -181,6 +227,8 @@ class EducativoService {
         instrucciones: j['instrucciones'] as String,
         minutosEstimados: j['minutos_estimados'] as int,
         urlRecurso: _url(j['url_recurso']),
+        esPremium: (j['es_premium'] as bool?) ?? false,
+        bloqueado: (j['bloqueado'] as bool?) ?? false,
       );
 
   static RutaAprendizaje _ruta(dynamic j) => RutaAprendizaje(

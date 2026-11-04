@@ -31,6 +31,13 @@ class EjercicioPsicoeducativo {
   /// Enlace opcional a un video o podcast externo (YouTube, Spotify…).
   final String? urlRecurso;
 
+  /// Solo para usuarias con plan premium (u hospital).
+  final bool esPremium;
+
+  /// Premium y la usuaria no lo es: el backend no manda las instrucciones
+  /// ni el enlace, y no deja completarlo.
+  final bool bloqueado;
+
   const EjercicioPsicoeducativo({
     required this.idEjercicio,
     required this.nombre,
@@ -39,5 +46,7 @@ class EjercicioPsicoeducativo {
     required this.instrucciones,
     required this.minutosEstimados,
     this.urlRecurso,
+    this.esPremium = false,
+    this.bloqueado = false,
   });
 }

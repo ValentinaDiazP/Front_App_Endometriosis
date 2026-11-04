@@ -63,9 +63,14 @@ class ContenidoCard extends StatelessWidget {
                           ),
                         ),
                         if (contenido.esPremium)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 6),
-                            child: Icon(Icons.workspace_premium, size: 18, color: Color(0xFFE98BA0)),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: Icon(
+                              // Candado si la usuaria no tiene Premium.
+                              contenido.bloqueado ? Icons.lock_outline : Icons.workspace_premium,
+                              size: 18,
+                              color: const Color(0xFFE98BA0),
+                            ),
                           ),
                       ],
                     ),

@@ -5,6 +5,7 @@ import '../../models/ejercicio_psicoeducativo.dart';
 import '../../educativo_routes.dart';
 import '../widgets/aviso_pendiente_card.dart';
 import '../widgets/progreso_modulo_mini.dart';
+import '../widgets/tarjeta_premium.dart';
 
 /// Lista de ejercicios psicoeducativos, agrupados por enfoque
 /// (Psicoeducación / TCC / ACT y Mindfulness).
@@ -64,6 +65,10 @@ class _EjerciciosScreenState extends State<EjerciciosScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('${ejercicio.minutosEstimados} min · ${ejercicio.descripcion}'),
+                            if (ejercicio.esPremium) ...[
+                              const SizedBox(height: 6),
+                              EtiquetaPremium(bloqueado: ejercicio.bloqueado),
+                            ],
                             if (modulo != null) ...[
                               const SizedBox(height: 6),
                               ProgresoModuloMini(

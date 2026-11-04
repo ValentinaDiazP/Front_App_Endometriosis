@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../data/educativo_repository.dart';
+import '../../models/progreso_aprendizaje.dart';
+import '../widgets/aviso_recompensa.dart';
 import '../widgets/carga_educativo.dart';
 import 'categorias_screen.dart';
 import 'para_ti_screen.dart';
 import 'ejercicios_screen.dart';
 import 'rutas_screen.dart';
 import 'chatbot_screen.dart';
+import 'mi_progreso_screen.dart';
 
 /// Pantalla contenedora del módulo Educativo.
 ///
@@ -18,10 +22,40 @@ import 'chatbot_screen.dart';
 ///
 /// [token] es el de la usuaria que inició sesión: con él se cargan desde
 /// Django el catálogo, sus preferencias y su progreso.
-class EducativoHomeScreen extends StatelessWidget {
+class EducativoHomeScreen extends StatefulWidget {
   final String? token;
 
   const EducativoHomeScreen({super.key, this.token});
+
+  @override
+  State<EducativoHomeScreen> createState() => _EducativoHomeScreenState();
+}
+
+class _EducativoHomeScreenState extends State<EducativoHomeScreen> {
+  String? get token => widget.token;
+
+  @override
+  void initState() {
+    super.initState();
+    // Aviso de puntos, rachas, niveles e insignias (motor de aprendizaje).
+    EducativoRepository.alGanarRecompensa = _mostrarRecompensa;
+  }
+
+  @override
+  void dispose() {
+    if (EducativoRepository.alGanarRecompensa == _mostrarRecompensa) {
+      EducativoRepository.alGanarRecompensa = null;
+    }
+    super.dispose();
+  }
+
+  void _mostrarRecompensa(ResultadoGamificacion recompensa) {
+    // Pequeña espera para que la pantalla que guardó termine de cerrarse y
+    // el aviso no quede tapado por su propio mensaje.
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (mounted) mostrarAvisoRecompensa(context, recompensa);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +65,16 @@ class EducativoHomeScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Educativo'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.emoji_events_outlined),
+              tooltip: 'Mi progreso',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MiProgresoScreen()),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.support_agent),
               tooltip: 'Asistente Endometriosis',

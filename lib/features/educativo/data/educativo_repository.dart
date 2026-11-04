@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import '../models/categoria_contenido.dart';
 import '../models/contenido_educativo.dart';
 import '../models/ejercicio_psicoeducativo.dart';
+import '../models/progreso_aprendizaje.dart';
+import '../models/recomendaciones_educativas.dart';
 import '../models/ruta_aprendizaje.dart';
 import '../services/educativo_service.dart';
 
@@ -96,8 +99,10 @@ class EducativoRepository {
 
   static Future<void> marcarContenidoCompletado(String idContenido) async {
     if (_contenidosCompletados.contains(idContenido)) return;
-    await EducativoService.marcarContenidoCompletado(_tokenActual, idContenido);
+    final recompensa =
+        await EducativoService.marcarContenidoCompletado(_tokenActual, idContenido);
     _contenidosCompletados.add(idContenido);
+    _celebrar(recompensa);
   }
 
   static bool ejercicioCompletado(String idEjercicio) =>
@@ -108,13 +113,61 @@ class EducativoRepository {
     String? respuestas,
     int? utilidad,
   }) async {
-    await EducativoService.registrarEjercicio(
+    final recompensa = await EducativoService.registrarEjercicio(
       _tokenActual,
       idEjercicio,
       respuestas: respuestas,
       utilidad: utilidad,
     );
     _ejerciciosCompletados.add(idEjercicio);
+    _celebrar(recompensa);
+  }
+
+  // ---------------------------------------------------------------------
+  // Motor de aprendizaje (puntos, niveles, rachas e insignias por ruta)
+  // ---------------------------------------------------------------------
+
+  /// La pantalla de entrada al módulo (EducativoHomeScreen) la registra para
+  /// mostrar un aviso cuando la usuaria gana puntos, sube de nivel o
+  /// consigue una insignia, sin que cada pantalla tenga que encargarse.
+  static void Function(ResultadoGamificacion)? alGanarRecompensa;
+
+  /// Sube cada vez que se guarda un contenido o ejercicio, para que las
+  /// tarjetas de progreso se actualicen solas.
+  static final ValueNotifier<int> cambiosProgreso = ValueNotifier<int>(0);
+
+  static void _celebrar(ResultadoGamificacion? recompensa) {
+    cambiosProgreso.value++;
+    if (recompensa != null && recompensa.hayNovedad) {
+      alGanarRecompensa?.call(recompensa);
+    }
+  }
+
+  /// Trae el progreso actual desde el backend (siempre fresco).
+  static Future<ProgresoAprendizaje> obtenerProgreso() =>
+      EducativoService.obtenerProgreso(_tokenActual);
+
+  // ---------------------------------------------------------------------
+  // Recomendaciones automáticas (preferencias + progreso + Seguimiento)
+  // ---------------------------------------------------------------------
+
+  /// Siempre fresco: cambian cuando la usuaria registra dolor o ánimo en
+  /// Seguimiento, cuando completa algo o cuando cambia sus preferencias.
+  static Future<RecomendacionesEducativas> obtenerRecomendaciones() =>
+      EducativoService.obtenerRecomendaciones(_tokenActual);
+
+  static ContenidoEducativo? contenidoPorId(String id) {
+    for (final c in contenidos) {
+      if (c.idContenido == id) return c;
+    }
+    return null;
+  }
+
+  static EjercicioPsicoeducativo? ejercicioPorId(String id) {
+    for (final e in ejercicios) {
+      if (e.idEjercicio == id) return e;
+    }
+    return null;
   }
 
   // Progreso parcial de módulos guiados: cuántos pasos ha alcanzado la
