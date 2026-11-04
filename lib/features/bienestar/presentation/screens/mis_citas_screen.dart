@@ -191,10 +191,10 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
   Future<void> _agregarAGoogleCalendar(CitaMedica cita) async {
     final title = Uri.encodeComponent('Cita de ${cita.especialidad} con ${cita.nombreEspecialista}');
     final details = Uri.encodeComponent('Lugar/Link: ${cita.lugarOLink}\nNotas: ${cita.notas}');
-    final fechaInicio = DateFormat('yyyyMMdd\'T\'HHmmss\'Z\'').format(cita.fechaHora.toUtc());
-    final fechaFin = DateFormat('yyyyMMdd\'T\'HHmmss\'Z\'').format(cita.fechaHora.add(const Duration(hours: 1)).toUtc());
+    final fechaInicio = DateFormat("yyyyMMdd'T'HHmmss").format(cita.fechaHora);
+    final fechaFin = DateFormat("yyyyMMdd'T'HHmmss").format(cita.fechaHora.add(const Duration(hours: 1)));
 
-    final url = Uri.parse('https://calendar.google.com/calendar/render?action=TEMPLATE&text=$title&dates=$fechaInicio/$fechaFin&details=$details');
+    final url = Uri.parse('https://calendar.google.com/calendar/render?action=TEMPLATE&text=$title&dates=$fechaInicio/$fechaFin&details=$details&ctz=America/Bogota');
     
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);

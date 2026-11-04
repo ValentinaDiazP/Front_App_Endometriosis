@@ -31,19 +31,38 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
   }
 
   Future<void> _cargarDisponibilidad() async {
+    setState(() {
+      _cargando = true;
+    });
     try {
       final token = AuthService.token ?? '';
-      final slots = await BienestarService.obtenerDisponibilidad(widget.profesional.id, token: token);
+      final fechaStr = DateFormat('yyyy-MM-dd').format(_fechaSeleccionada);
+      final rawSlots = await BienestarService.obtenerDisponibilidad(widget.profesional.id, fecha: fechaStr, token: token);
+      
       setState(() {
-        _slots = slots;
+        _slots = rawSlots.map((hora) {
+          // hora es un string 'HH:MM' devuelto por el backend
+          final partes = hora.split(':');
+          final h = int.tryParse(partes[0]) ?? 9;
+          final m = partes.length > 1 ? (int.tryParse(partes[1]) ?? 0) : 0;
+          final dtInicio = DateTime(0, 0, 0, h, m);
+          final dtFin = dtInicio.add(const Duration(hours: 1));
+          final horaFinStr = '${dtFin.hour.toString().padLeft(2, '0')}:${dtFin.minute.toString().padLeft(2, '0')}';
+
+          return DisponibilidadSlot(
+            id: 0,
+            diaSemana: fechaStr,
+            horaInicio: hora,
+            horaFin: horaFinStr,
+          );
+        }).toList();
         _cargando = false;
+        _slotSeleccionado = null; // Reiniciar selección al cambiar fecha
       });
     } catch (e) {
       setState(() {
         _cargando = false;
-      });
-      // Si no hay horarios configurados en BD, generamos mocks por defecto para agilizar la prueba
-      setState(() {
+        // Mocks por defecto si falla la red
         _slots = [
           DisponibilidadSlot(id: 1, diaSemana: 'Lunes', horaInicio: '09:00', horaFin: '10:00'),
           DisponibilidadSlot(id: 2, diaSemana: 'Martes', horaInicio: '10:30', horaFin: '11:30'),
@@ -67,6 +86,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
       setState(() {
         _fechaSeleccionada = picked;
       });
+      _cargarDisponibilidad();
     }
   }
 

@@ -30,25 +30,8 @@ class _CarritoScreenState extends State<CarritoScreen> {
         _isLoading = false;
       });
     } catch (_) {
-      // Fallback mock items si falla la API
       setState(() {
-        _items = [
-          ItemCarrito(
-            id: 1,
-            productoId: 1,
-            cantidad: 1,
-            productoDetalle: Producto(
-              id: 1,
-              nombre: 'Bolsa Térmica de Alivio',
-              descripcion: 'Calor enfocado para dolor pélvico.',
-              precio: 45000.0,
-              categoria: 'ALIVIO_TERMICO',
-              marca: 'Florecer',
-              imagenUrl: 'https://th.bing.com/th/id/R.a43d8cf66a9d4c22c1f46fc5f8a04a3f?rik=pEuCeoiBuf0fUA&pid=ImgRaw&r=0',
-              disponible: true,
-            ),
-          )
-        ];
+        _items = [];
         _isLoading = false;
       });
     }
@@ -162,10 +145,25 @@ class _CarritoScreenState extends State<CarritoScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _items.isEmpty
-              ? const Center(
-                  child: Text(
-                    'Tu carrito está vacío.',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(
+                        Icons.shopping_cart_outlined,
+                        size: 80,
+                        color: Color(0xFFEC407A),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Tu carrito está vacío',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFEC407A),
+                        ),
+                      ),
+                    ],
                   ),
                 )
               : Column(

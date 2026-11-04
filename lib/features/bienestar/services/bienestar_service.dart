@@ -19,7 +19,7 @@ class BienestarService {
     if (json) {
       headers['Content-Type'] = 'application/json; charset=UTF-8';
     }
-    if (token != null && token.isNotEmpty) {
+    if (token != null && token.isNotEmpty && token != 'mock_token') {
       headers['Authorization'] = 'Token $token';
     }
     return headers;
@@ -27,7 +27,7 @@ class BienestarService {
 
   static Future<List<Profesional>> obtenerProfesionales({String? token}) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/professionals/'),
+      Uri.parse('$baseUrl/profesionales/'),
       headers: _headers(token: token),
     );
     if (response.statusCode != 200) {
@@ -39,23 +39,22 @@ class BienestarService {
         .toList();
   }
 
-  static Future<List<DisponibilidadSlot>> obtenerDisponibilidad(int profesionalId, {String? token}) async {
+  static Future<List<dynamic>> obtenerDisponibilidad(int profesionalId, {String? fecha, String? token}) async {
+    final fechaQuery = fecha != null ? '?fecha=$fecha' : '';
     final response = await http.get(
-      Uri.parse('$baseUrl/professionals/$profesionalId/disponibilidad/'),
+      Uri.parse('$baseUrl/profesionales/$profesionalId/disponibilidad/$fechaQuery'),
       headers: _headers(token: token),
     );
     if (response.statusCode != 200) {
       throw Exception('Error al consultar la disponibilidad del profesional');
     }
     final lista = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
-    return lista
-        .map((e) => DisponibilidadSlot.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return lista;
   }
 
   static Future<List<CitaMedica>> obtenerCitas({required String token}) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/profesionales/citas/'),
+      Uri.parse('$baseUrl/citas/'),
       headers: _headers(token: token),
     );
     if (response.statusCode != 200) {
@@ -68,20 +67,21 @@ class BienestarService {
   }
 
   static Future<CitaMedica> crearCita({required Map<String, dynamic> data, required String token}) async {
+    print("TOKEN RECUPERADO: $token");
     final response = await http.post(
-      Uri.parse('$baseUrl/profesionales/citas/'),
+      Uri.parse('$baseUrl/citas/'),
       headers: _headers(token: token),
       body: jsonEncode(data),
     );
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception('Error al agendar la cita médica');
+      throw Exception('Error al agendar la cita médica: ${response.body}');
     }
     return CitaMedica.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
   }
 
   static Future<CitaMedica> actualizarEstadoCita(int citaId, String nuevoEstado, {required String token}) async {
     final response = await http.patch(
-      Uri.parse('$baseUrl/profesionales/citas/$citaId/'),
+      Uri.parse('$baseUrl/citas/$citaId/'),
       headers: _headers(token: token),
       body: jsonEncode({'estado': nuevoEstado}),
     );
@@ -93,7 +93,7 @@ class BienestarService {
 
   static Future<Map<String, dynamic>> obtenerReporteSalud(int citaId, {required String token}) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/profesionales/citas/$citaId/reporte-salud/'),
+      Uri.parse('$baseUrl/citas/$citaId/reporte-salud/'),
       headers: _headers(token: token),
     );
     if (response.statusCode != 200) {
@@ -114,7 +114,14 @@ class BienestarService {
     return response.statusCode == 200 || response.statusCode == 201;
   }
 
-  // --- TIENDA VIRTUAL ---
+  static Future<Producto> obtenerProductoDetalle({required int productoId}) async {
+    final response = await http.get(Uri.parse('$baseUrl/productos/$productoId/'));
+    if (response.statusCode != 200) {
+      throw Exception('Error al cargar detalle del producto');
+    }
+    final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    return Producto.fromJson(data);
+  }
   static Future<List<Producto>> obtenerProductos() async {
     final response = await http.get(Uri.parse('$baseUrl/productos/'));
     if (response.statusCode != 200) {
@@ -129,6 +136,8 @@ class BienestarService {
       Uri.parse('$baseUrl/carrito/'),
       headers: _headers(token: token),
     );
+    print('CARRITO HTTP STATUS: ${response.statusCode}');
+    print('CARRITO HTTP BODY: ${response.body}');
     if (response.statusCode != 200) {
       throw Exception('Error al cargar el carrito');
     }
@@ -142,6 +151,8 @@ class BienestarService {
       headers: _headers(token: token),
       body: jsonEncode({'producto': productoId, 'cantidad': cantidad}),
     );
+    print('CARRITO HTTP STATUS: ${response.statusCode}');
+    print('CARRITO HTTP BODY: ${response.body}');
     if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Error al agregar producto al carrito');
     }

@@ -118,6 +118,7 @@ class AuthService {
 
     if (response.statusCode == 201) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _currentToken = data['token'] as String;
       return RegistroExitoso(
         token: data['token'] as String,
         usuarioId: data['usuario_id'] as int,
@@ -139,6 +140,7 @@ class AuthService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _currentToken = data['token'] as String;
       return LoginExitoso(token: data['token'] as String);
     }
     throw Exception(_extraerMensajeError(response.body));
