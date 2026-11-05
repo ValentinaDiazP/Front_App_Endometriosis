@@ -28,6 +28,11 @@ class ContenidoEducativo {
   /// enlace, y no deja marcarlo como leído.
   final bool bloqueado;
 
+  /// Imagen opcional (URL completa) y su pie de foto. Se cargan desde el
+  /// admin de Django.
+  final String? imagenUrl;
+  final String? pieDeImagen;
+
   const ContenidoEducativo({
     required this.idContenido,
     required this.idCategoriaFK,
@@ -41,5 +46,7 @@ class ContenidoEducativo {
     required this.minutosEstimados,
     this.urlRecurso,
     this.bloqueado = false,
+    this.imagenUrl,
+    this.pieDeImagen,
   });
 }
