@@ -1,3 +1,5 @@
+import 'modulo_psicoeducativo.dart';
+
 /// Enfoque terapéutico del ejercicio, según el diagrama ER:
 /// "TCC, ACT, Mindfulness, Psicoeducación".
 enum TipoEjercicio { psicoeducacion, tcc, actMindfulness }
@@ -38,6 +40,14 @@ class EjercicioPsicoeducativo {
   /// ni el enlace, y no deja completarlo.
   final bool bloqueado;
 
+  /// Pasos del módulo guiado (solo ejercicios de psicoeducación). Se editan
+  /// desde el admin de Django; vacío si el ejercicio no tiene módulo.
+  final List<PasoModulo> pasos;
+
+  /// Indicaciones de la práctica guiada (ACT / Mindfulness), en orden.
+  /// Se editan desde el admin de Django; vacío si no hay.
+  final List<String> indicaciones;
+
   const EjercicioPsicoeducativo({
     required this.idEjercicio,
     required this.nombre,
@@ -48,5 +58,7 @@ class EjercicioPsicoeducativo {
     this.urlRecurso,
     this.esPremium = false,
     this.bloqueado = false,
+    this.pasos = const [],
+    this.indicaciones = const [],
   });
 }

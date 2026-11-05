@@ -5,6 +5,7 @@ import '../../services/educativo_service.dart' show PremiumRequeridoException;
 import '../widgets/boton_recurso_externo.dart';
 import '../widgets/tarjeta_premium.dart';
 import '../widgets/nivel_badge.dart';
+import '../widgets/texto_enriquecido.dart';
 
 /// Detalle de un ítem de la biblioteca. Recibe el [ContenidoEducativo] ya
 /// cargado por argumento de navegación (no vuelve a pedirlo al API).
@@ -123,9 +124,32 @@ class _ContenidoDetailScreenState extends State<ContenidoDetailScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-              // Por ahora el cuerpo se muestra como texto plano (más adelante
-              // podría ir formateado con markdown/rich text).
-              Text(contenido.cuerpo),
+              // Imagen opcional con su pie de foto (se carga desde el admin).
+              if (contenido.imagenUrl != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    contenido.imagenUrl!,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                  ),
+                ),
+                if (contenido.pieDeImagen != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    contenido.pieDeImagen!,
+                    style: const TextStyle(fontSize: 12.5, color: Colors.black54, fontStyle: FontStyle.italic),
+                  ),
+                ],
+                const SizedBox(height: 16),
+              ],
+              // El cuerpo admite un formato sencillo (negrita, subrayado,
+              // enlaces y listas) que se escribe desde el admin.
+              TextoEnriquecido(
+                texto: contenido.cuerpo,
+                estilo: const TextStyle(fontSize: 15, height: 1.5),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,

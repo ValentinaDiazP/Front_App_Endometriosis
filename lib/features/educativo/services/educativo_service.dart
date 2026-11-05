@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/categoria_contenido.dart';
 import '../models/contenido_educativo.dart';
 import '../models/ejercicio_psicoeducativo.dart';
+import '../models/modulo_psicoeducativo.dart';
 import '../models/progreso_aprendizaje.dart';
 import '../models/recomendaciones_educativas.dart';
 import '../models/ruta_aprendizaje.dart';
@@ -198,6 +199,25 @@ class EducativoService {
     return texto.isEmpty ? null : texto;
   }
 
+  /// La imagen puede llegar como URL completa o como ruta relativa
+  /// (/media/...); en ese caso se completa con el servidor de la API.
+  static String? _imagen(dynamic valor) {
+    final texto = (valor as String?)?.trim() ?? '';
+    if (texto.isEmpty) return null;
+    if (texto.startsWith('http://') || texto.startsWith('https://')) return texto;
+    final origen = Uri.parse(_baseUrl).origin;
+    return texto.startsWith('/') ? '$origen$texto' : '$origen/$texto';
+  }
+
+  static PasoModulo _paso(dynamic j) {
+    final clave = (j['punto_clave'] as String?)?.trim() ?? '';
+    return PasoModulo(
+      titulo: j['titulo'] as String,
+      parrafos: ((j['parrafos'] as List<dynamic>?) ?? const []).cast<String>(),
+      puntoClave: clave.isEmpty ? null : clave,
+    );
+  }
+
   static CategoriaContenido _categoria(dynamic j) => CategoriaContenido(
         idCategoria: j['id'] as String,
         nombre: j['nombre'] as String,
@@ -217,6 +237,8 @@ class EducativoService {
         minutosEstimados: j['minutos_estimados'] as int,
         urlRecurso: _url(j['url_recurso']),
         bloqueado: (j['bloqueado'] as bool?) ?? false,
+        imagenUrl: _imagen(j['imagen']),
+        pieDeImagen: _url(j['pie_de_imagen']),
       );
 
   static EjercicioPsicoeducativo _ejercicio(dynamic j) => EjercicioPsicoeducativo(
@@ -229,6 +251,8 @@ class EducativoService {
         urlRecurso: _url(j['url_recurso']),
         esPremium: (j['es_premium'] as bool?) ?? false,
         bloqueado: (j['bloqueado'] as bool?) ?? false,
+        pasos: ((j['pasos'] as List<dynamic>?) ?? const []).map(_paso).toList(),
+        indicaciones: ((j['indicaciones'] as List<dynamic>?) ?? const []).cast<String>(),
       );
 
   static RutaAprendizaje _ruta(dynamic j) => RutaAprendizaje(

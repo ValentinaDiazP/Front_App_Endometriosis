@@ -7,7 +7,6 @@ import '../../models/ejercicio_psicoeducativo.dart';
 import '../../models/recomendaciones_educativas.dart';
 import '../widgets/aviso_pendiente_card.dart';
 import '../widgets/contenido_card.dart';
-import '../widgets/resumen_progreso_card.dart';
 import '../widgets/tarjeta_premium.dart';
 import '../../../../core/theme/app_theme.dart';
 import 'preferencias_screen.dart';
@@ -151,7 +150,6 @@ class _ParaTiScreenState extends State<ParaTiScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          const ResumenProgresoCard(),
           const AvisoPendienteCard(),
           _SenalesCard(
             senales: _recomendaciones?.senales,

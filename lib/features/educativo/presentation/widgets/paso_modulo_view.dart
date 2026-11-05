@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/modulo_psicoeducativo.dart';
 import '../../../../core/theme/app_theme.dart';
+import 'texto_enriquecido.dart';
 
 /// Contenido de un paso del módulo: título, párrafos y la "idea clave"
 /// resaltada. Se usa dentro del PageView de [ModuloGuiadoScreen].
@@ -29,7 +30,7 @@ class PasoModuloView extends StatelessWidget {
           Text(paso.titulo, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 14),
           for (final parrafo in paso.parrafos) ...[
-            Text(parrafo, style: const TextStyle(fontSize: 15.5, height: 1.5)),
+            TextoEnriquecido(texto: parrafo),
             const SizedBox(height: 12),
           ],
           if (paso.puntoClave != null) ...[

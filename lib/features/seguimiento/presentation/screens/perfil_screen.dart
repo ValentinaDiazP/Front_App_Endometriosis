@@ -3,6 +3,7 @@ import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/sintomas_service.dart';
 import '../../models/informacion_personal.dart';
 import '../../models/progreso_gamificacion.dart';
+import '../../../educativo/presentation/widgets/seccion_aprendizaje_perfil.dart';
 
 class PerfilScreen extends StatefulWidget {
   final InformacionPersonal informacionPersonal;
@@ -23,6 +24,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
   ProgresoGamificacion? _progreso;
   bool _cargando = true;
   String? _error;
+  int _version = 0; // al refrescar, también se recarga "Mi aprendizaje"
 
   @override
   void initState() {
@@ -34,6 +36,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
     setState(() {
       _cargando = true;
       _error = null;
+      _version++;
     });
     try {
       final resultados = await Future.wait([
@@ -58,9 +61,42 @@ class _PerfilScreenState extends State<PerfilScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi perfil')),
+      appBar: AppBar(
+        title: const Text('Mi perfil'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Cerrar sesión',
+            onPressed: _confirmarCerrarSesion,
+          ),
+        ],
+      ),
       body: _construirCuerpo(),
     );
+  }
+
+  /// Vuelve a la pantalla de inicio de sesión (la ruta '/' es AuthScreen) y
+  /// borra la navegación anterior, para que "atrás" no regrese a la cuenta.
+  Future<void> _confirmarCerrarSesion() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Text('¿Quieres cerrar tu sesión en Florecer?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+    if (confirmar != true || !mounted) return;
+    Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/', (_) => false);
   }
 
   Widget _construirCuerpo() {
@@ -280,7 +316,12 @@ class _PerfilScreenState extends State<PerfilScreen> {
               const SizedBox(height: 24),
             ],
 
-            // 5. Tarjeta Guía '¿Cómo ganar puntos y su propósito?'
+            // 5. Progreso del módulo Educativo (puntos de aprendizaje, nivel,
+            // racha e insignias por ruta).
+            SeccionAprendizajePerfil(key: ValueKey(_version), token: widget.token),
+            const SizedBox(height: 24),
+
+            // 6. Tarjeta Guía '¿Cómo ganar puntos y su propósito?'
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -314,8 +355,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     const Divider(height: 24),
                     _buildGuiaItem(
                       icon: '📚',
-                      titulo: 'Completar lección (+10 pts)',
-                      proposito: 'Empodera tu salud con conocimiento.',
+                      titulo: 'Leer un contenido (+10) o hacer un ejercicio (+15)',
+                      proposito: 'Suma puntos de aprendizaje y sube de nivel en Educativo.',
                     ),
                   ],
                 ),
