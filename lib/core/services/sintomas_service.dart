@@ -212,9 +212,20 @@ class SintomasService {
         'abundancia': abundancia.name,
       };
 
-  static Future<List<RegistroCiclo>> obtenerCiclos(String token) async {
+  static Future<List<RegistroCiclo>> obtenerCiclos(
+    String token, {
+    DateTime? desde,
+    DateTime? hasta,
+  }) async {
+    var uri = Uri.parse('$_baseUrl/registros-ciclo/');
+    final queryParams = <String, String>{};
+    if (desde != null) queryParams['desde'] = _fechaApi(desde);
+    if (hasta != null) queryParams['hasta'] = _fechaApi(hasta);
+    if (queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams);
+    }
     final response = await http.get(
-      Uri.parse('$_baseUrl/registros-ciclo/'),
+      uri,
       headers: _headers(token),
     );
     if (response.statusCode != 200) {

@@ -4,6 +4,7 @@ import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/resumen_medico_pdf.dart';
 import '../../../../core/services/sintomas_service.dart';
 import '../../models/historial_sintoma.dart';
+import '../../models/registro_ciclo.dart';
 import '../../models/registro_emocional.dart';
 import 'premium_info_screen.dart';
  
@@ -84,6 +85,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
   int _dias = 7;
   List<HistorialSintoma> _sintomas = [];
   List<RegistroEmocional> _animos = [];
+  List<RegistroCiclo> _ciclos = [];
   bool _esPremium = false;
   bool _cargando = true;
   bool _generandoPdf = false;
@@ -107,6 +109,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
       final sintomas =
           await SintomasService.obtenerHistorialSintomas(widget.token);
       final animos = await SintomasService.obtenerCheckIns(widget.token);
+      final ciclos = await SintomasService.obtenerCiclos(widget.token);
  
       // El plan se consulta aparte: si falla, la usuaria se trata como
       // gratuita y los reportes básicos siguen funcionando.
@@ -120,6 +123,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
       setState(() {
         _sintomas = sintomas;
         _animos = animos;
+        _ciclos = ciclos;
         _esPremium = esPremium;
         if (!esPremium && _dias > 30) _dias = 30;
         _cargando = false;
@@ -313,6 +317,27 @@ class _ReportesScreenState extends State<ReportesScreen> {
       b.isEmpty ? null : _media(b),
       b.length,
     );
+  }
+
+  Set<int> _diasReglaClaves(List<RegistroCiclo> ciclos) {
+    final claves = <int>{};
+    for (final c in ciclos) {
+      for (final d in c.diasCubiertos) {
+        claves.add(_clave(d));
+      }
+    }
+    return claves;
+  }
+
+  bool _tieneReglaCompleta(List<RegistroCiclo> ciclos) {
+    final inicioNorm = DateTime(_inicio.year, _inicio.month, _inicio.day);
+    final hoyNorm = DateTime(_hoy.year, _hoy.month, _hoy.day);
+    return ciclos.any((c) {
+      if (c.fechaFin == null) return false;
+      final ini = DateTime(c.fechaInicio.year, c.fechaInicio.month, c.fechaInicio.day);
+      final fin = DateTime(c.fechaFin!.year, c.fechaFin!.month, c.fechaFin!.day);
+      return !ini.isBefore(inicioNorm) && !fin.isAfter(hoyNorm);
+    });
   }
  
   // ---------- Piezas visuales ----------
@@ -610,6 +635,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
       final bytes = await ResumenMedicoPdf.generar(
         sintomas: enRango,
         checkins: animosEnRango,
+        ciclos: _ciclos,
         inicio: _inicio,
         fin: _hoy,
         nombre: opciones.nombre,
@@ -1202,6 +1228,21 @@ class _ReportesScreenState extends State<ReportesScreen> {
       if (energias.isNotEmpty)
         'energía ${_media(energias.map((r) => r.energia!)).toStringAsFixed(1)}/5',
     ];
+
+    final reglaClaves = _diasReglaClaves(_ciclos);
+    final completa = _tieneReglaCompleta(_ciclos);
+    final enReglaMedica = <int>[];
+    final fueraReglaMedica = <int>[];
+    for (final entry in dolor.entries) {
+      final fecha = _inicio.add(Duration(days: entry.key));
+      if (reglaClaves.contains(_clave(fecha))) {
+        enReglaMedica.add(entry.value);
+      } else {
+        fueraReglaMedica.add(entry.value);
+      }
+    }
+    final puedeCompararCicloMedica =
+        completa && enReglaMedica.length >= 3 && fueraReglaMedica.length >= 3;
  
     return Card(
       margin: EdgeInsets.zero,
@@ -1312,6 +1353,12 @@ class _ReportesScreenState extends State<ReportesScreen> {
                     ),
                   if (partesSueno.isNotEmpty)
                     _lineaMedica('Sueño y energía', partesSueno.join(' · ')),
+                  if (puedeCompararCicloMedica)
+                    _lineaMedica(
+                      'Dolor y regla',
+                      '${_media(enReglaMedica).toStringAsFixed(1)} en la regla (${enReglaMedica.length} ${enReglaMedica.length == 1 ? 'día' : 'días'}) frente a '
+                      '${_media(fueraReglaMedica).toStringAsFixed(1)} fuera de ella (${fueraReglaMedica.length} ${fueraReglaMedica.length == 1 ? 'día' : 'días'})',
+                    ),
                 ],
               ),
             ),
@@ -1825,6 +1872,60 @@ class _ReportesScreenState extends State<ReportesScreen> {
             ),
     );
   }
+
+  Widget _tarjetaDolorCiclo({
+    required Map<int, int> dolor,
+    required List<RegistroCiclo> ciclos,
+  }) {
+    final reglaClaves = _diasReglaClaves(ciclos);
+    final completa = _tieneReglaCompleta(ciclos);
+
+    final enRegla = <int>[];
+    final fueraRegla = <int>[];
+
+    for (final entry in dolor.entries) {
+      final fecha = _inicio.add(Duration(days: entry.key));
+      if (reglaClaves.contains(_clave(fecha))) {
+        enRegla.add(entry.value);
+      } else {
+        fueraRegla.add(entry.value);
+      }
+    }
+
+    final puedeComparar = completa && enRegla.length >= 3 && fueraRegla.length >= 3;
+
+    return _tarjetaSimple(
+      titulo: 'Dolor en la regla vs fuera de ella',
+      subtitulo: 'Dolor promedio (0-10) en días con sangrado frente al resto del período.',
+      hijo: puedeComparar
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _barraDolor('Durante la regla', _media(enRegla), enRegla.length),
+                _barraDolor('Fuera de la regla', _media(fueraRegla), fueraRegla.length),
+                Text(
+                  'Es una observación de tus propios registros, no un diagnóstico.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Aún no hay suficientes registros para comparar',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Se requiere que el período incluya al menos una regla completa y '
+                  'un mínimo de 3 días con dolor registrado en cada grupo.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+    );
+  }
  
   Widget _tarjetaCapacidad(List<RegistroEmocional> animosEnRango) {
     const orden = ['todo', 'casi_todo', 'poco', 'no_pude'];
@@ -2053,6 +2154,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
       if (_esPremium) ...[
         _hallazgos(dolorPorDia, animoPorDia, sintomasEnRango),
         _tarjetaCalendario(),
+        _tarjetaDolorCiclo(dolor: dolorPorDia, ciclos: _ciclos),
         _tarjetaCruce(
           titulo: 'Tu dolor según el sueño',
           subtitulo: 'Dolor promedio (0-10) según las horas que dormiste.',
