@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/profesional.dart';
 import '../../services/bienestar_service.dart';
 import 'detalle_profesional_screen.dart';
+import 'mis_citas_screen.dart';
 
 class ProfesionalesScreen extends StatefulWidget {
   final String? token;
@@ -17,6 +18,7 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
   late Future<List<Profesional>> _futureProfesionales;
   String _filtroBusqueda = '';
   String _categoriaSeleccionada = 'Todos';
+  late final ScrollController _scrollController;
 
   final List<String> _categorias = [
     'Todos',
@@ -30,8 +32,27 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     _futureProfesionales = BienestarService.obtenerProfesionales(
       token: widget.token,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _desplazarCategorias(double delta) {
+    final nuevoOffset = (_scrollController.offset + delta).clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+    _scrollController.animateTo(
+      nuevoOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
     );
   }
 
@@ -73,146 +94,203 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Barra de búsqueda y Filtros por Categoría
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.white,
-          child: Column(
-            children: [
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Buscar por nombre o especialidad...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Profesionales de Bienestar', style: TextStyle(fontSize: 18, color: Colors.white)),
+        backgroundColor: const Color(0xFFD81B60),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today_outlined, color: Colors.white),
+            tooltip: 'Mis Citas',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const MisCitasScreen(),
                 ),
-                onChanged: (valor) {
-                  setState(() {
-                    _filtroBusqueda = _normalizar(valor);
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 42,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    children: _categorias.map((categoria) {
-                      final seleccionada = _categoriaSeleccionada == categoria;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(categoria),
-                          selected: seleccionada,
-                          selectedColor: Theme.of(context).colorScheme.primary,
-                          labelStyle: TextStyle(
-                            color: seleccionada ? Colors.white : Colors.black87,
-                            fontWeight: seleccionada ? FontWeight.bold : FontWeight.normal,
-                          ),
-                          backgroundColor: Colors.grey.shade200,
-                          onSelected: (bool selected) {
-                            setState(() {
-                              _categoriaSeleccionada = categoria;
-                            });
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder<List<Profesional>>(
-            future: _futureProfesionales,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Text(
-                      'Error de conexión con Backend Django:\n${snapshot.error}',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                );
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
-                  child: Text('No hay profesionales registrados aún.'),
-                );
-              }
-
-              final todosProfesionales = snapshot.data!;
-              final profesionales = todosProfesionales.where((p) {
-                final nombreNorm = _normalizar(p.nombre);
-                final espNorm = _normalizar(p.especialidad);
-                
-                final coincideBusqueda = nombreNorm.contains(_filtroBusqueda) ||
-                    espNorm.contains(_filtroBusqueda);
-
-                if (_categoriaSeleccionada == 'Todos') {
-                  return coincideBusqueda;
-                }
-
-                String keyword = _normalizar(_categoriaSeleccionada);
-                if (keyword == 'ginecologia') keyword = 'ginec';
-                if (keyword == 'nutricion') keyword = 'nutri';
-                if (keyword == 'psicologia') keyword = 'psic';
-                if (keyword == 'suelo pelvico') keyword = 'pelv';
-                if (keyword == 'virtual') keyword = 'virtual';
-
-                final coincideCategoria = espNorm.contains(keyword) ||
-                    nombreNorm.contains(keyword);
-
-                return coincideBusqueda && coincideCategoria;
-              }).toList();
-
-              if (profesionales.isEmpty) {
-                return const Center(
-                  child: Text('No se encontraron profesionales con esos criterios.'),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: profesionales.length,
-                itemBuilder: (context, index) {
-                  final profesional = profesionales[index];
-                  return _TarjetaProfesional(
-                    profesional: profesional,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => DetalleProfesionalScreen(
-                            profesional: profesional,
-                            onContactar: () => _contactar(profesional),
-                          ),
-                        ),
-                      );
-                    },
-                    onWhatsApp: () => _contactar(profesional),
-                  );
-                },
               );
             },
           ),
-        ),
-      ],
+        ],
+      ),
+      body: Column(
+        children: [
+          // Barra de búsqueda y Filtros por Categoría con Botones de Navegación Lateral
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.white,
+            child: Column(
+              children: [
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por nombre o especialidad...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  ),
+                  onChanged: (valor) {
+                    setState(() {
+                      _filtroBusqueda = _normalizar(valor);
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      height: 36,
+                      width: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.chevron_left, size: 20, color: Color(0xFF8E24AA)),
+                        onPressed: () => _desplazarCategorias(-150),
+                        tooltip: 'Desplazar a la izquierda',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: 42,
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: _categorias.length,
+                          itemBuilder: (context, index) {
+                            final categoria = _categorias[index];
+                            final seleccionada = _categoriaSeleccionada == categoria;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(categoria),
+                                selected: seleccionada,
+                                selectedColor: const Color(0xFFD81B60),
+                                labelStyle: TextStyle(
+                                  color: seleccionada ? Colors.white : Colors.black87,
+                                  fontWeight: seleccionada ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                backgroundColor: Colors.grey.shade200,
+                                onSelected: (bool selected) {
+                                  setState(() {
+                                    _categoriaSeleccionada = categoria;
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 36,
+                      width: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.chevron_right, size: 20, color: Color(0xFF8E24AA)),
+                        onPressed: () => _desplazarCategorias(150),
+                        tooltip: 'Desplazar a la derecha',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Profesional>>(
+              future: _futureProfesionales,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        'Error de conexión con Backend Django:\n${snapshot.error}',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Text('No hay profesionales registrados aún.'),
+                  );
+                }
+
+                final todosProfesionales = snapshot.data!;
+                final profesionales = todosProfesionales.where((p) {
+                  final nombreNorm = _normalizar(p.nombre);
+                  final espNorm = _normalizar(p.especialidad);
+                  
+                  final coincideBusqueda = nombreNorm.contains(_filtroBusqueda) ||
+                      espNorm.contains(_filtroBusqueda);
+
+                  if (_categoriaSeleccionada == 'Todos') {
+                    return coincideBusqueda;
+                  }
+
+                  String keyword = _normalizar(_categoriaSeleccionada);
+                  if (keyword == 'ginecologia') keyword = 'ginec';
+                  if (keyword == 'nutricion') keyword = 'nutri';
+                  if (keyword == 'psicologia') keyword = 'psic';
+                  if (keyword == 'suelo pelvico') keyword = 'pelv';
+                  if (keyword == 'virtual') keyword = 'virtual';
+
+                  final coincideCategoria = espNorm.contains(keyword) ||
+                      nombreNorm.contains(keyword);
+
+                  return coincideBusqueda && coincideCategoria;
+                }).toList();
+
+                if (profesionales.isEmpty) {
+                  return const Center(
+                    child: Text('No se encontraron profesionales con esos criterios.'),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: profesionales.length,
+                  itemBuilder: (context, index) {
+                    final profesional = profesionales[index];
+                    return _TarjetaProfesional(
+                      profesional: profesional,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => DetalleProfesionalScreen(
+                              profesional: profesional,
+                              onContactar: () => _contactar(profesional),
+                            ),
+                          ),
+                        );
+                      },
+                      onWhatsApp: () => _contactar(profesional),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -250,13 +328,13 @@ class _TarjetaProfesional extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                    backgroundColor: const Color(0xFFF8BBD0),
                     child: Text(
                       profesional.nombre.isNotEmpty ? profesional.nombre[0].toUpperCase() : 'P',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: Color(0xFFD81B60),
                       ),
                     ),
                   ),
@@ -279,17 +357,17 @@ class _TarjetaProfesional extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         Row(
-                          children: [
-                            const Icon(Icons.star, color: Colors.amber, size: 16),
-                            const SizedBox(width: 4),
-                            const Text(
+                          children: const [
+                            Icon(Icons.star, color: Colors.amber, size: 16),
+                            SizedBox(width: 4),
+                            Text(
                               '4.9',
                               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Text(
                               '(18 opiniones)',
-                              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                              style: TextStyle(color: Colors.grey, fontSize: 12),
                             ),
                           ],
                         ),
@@ -308,7 +386,7 @@ class _TarjetaProfesional extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: colorBadge.withValues(alpha: 0.2),
+                      color: colorBadge.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: colorBadge),
                     ),
@@ -338,7 +416,7 @@ class _TarjetaProfesional extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onTap,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        backgroundColor: const Color(0xFF8E24AA),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

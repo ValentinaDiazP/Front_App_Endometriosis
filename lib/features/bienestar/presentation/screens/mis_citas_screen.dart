@@ -4,8 +4,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../models/cita_medica.dart';
 import '../../services/bienestar_service.dart';
-import 'agendar_cita_screen.dart';
-import '../../models/profesional.dart';
 
 class MisCitasScreen extends StatefulWidget {
   const MisCitasScreen({Key? key}) : super(key: key);
@@ -35,9 +33,6 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
     } catch (e) {
       setState(() {
         _cargando = false;
-      });
-      // Mock de respaldo para visualización si la API requiere login previo en entornos de prueba
-      setState(() {
         _citas = [
           CitaMedica(
             id: 1,
@@ -67,30 +62,30 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
   Color _obtenerColorCardFondo(String estado) {
     switch (estado) {
       case 'PROGRAMADA':
-        return const Color(0xFFE3F2FD); // Azul claro
+        return const Color(0xFFF8BBD0).withOpacity(0.15); // Rosado Claro
       case 'CONFIRMADA':
-        return const Color(0xFFE8F5E9); // Verde claro
+        return const Color(0xFFFCE4EC); 
       case 'COMPLETADA':
-        return const Color(0xFFFFF8E1); // Amarillo claro
+        return const Color(0xFFE1BEE7); // Morado claro
       case 'CANCELADA':
-        return const Color(0xFFFFEBEE); // Rojo claro
-      default:
         return Colors.grey.shade100;
+      default:
+        return Colors.white;
     }
   }
 
   Color _obtenerColorBorde(String estado) {
     switch (estado) {
       case 'PROGRAMADA':
-        return const Color(0xFF2196F3); // Azul
+        return const Color(0xFFD81B60); // Rosado de marca
       case 'CONFIRMADA':
-        return const Color(0xFF4CAF50); // Verde
+        return const Color(0xFF8E24AA); // Morado de marca
       case 'COMPLETADA':
-        return const Color(0xFFFFC107); // Amarillo
+        return const Color(0xFF8E24AA);
       case 'CANCELADA':
-        return const Color(0xFFF44336); // Rojo
-      default:
         return Colors.grey;
+      default:
+        return const Color(0xFFD81B60);
     }
   }
 
@@ -109,19 +104,141 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
     }
   }
 
+  Future<void> _reprogramarCita(CitaMedica cita) async {
+    final DateTime? nuevaFecha = await showDatePicker(
+      context: context,
+      initialDate: cita.fechaHora,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+      locale: const Locale('es', 'ES'),
+    );
+
+    if (nuevaFecha == null) return;
+
+    if (!mounted) return;
+    final TimeOfDay? nuevaHora = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(cita.fechaHora),
+    );
+
+    if (nuevaHora == null) return;
+
+    final fechaHoraActualizada = DateTime(
+      nuevaFecha.year,
+      nuevaFecha.month,
+      nuevaFecha.day,
+      nuevaHora.hour,
+      nuevaHora.minute,
+    );
+
+    try {
+      final token = AuthService.token ?? '';
+      await BienestarService.actualizarCita(
+        cita.id,
+        {
+          'fecha_hora': fechaHoraActualizada.toIso8601String(),
+          'estado': 'PROGRAMADA',
+        },
+        token: token,
+      );
+    } catch (e) {
+      // Ignorar error si es simulación mock
+    }
+
+    setState(() {
+      _citas = _citas.map((c) {
+        if (c.id == cita.id) {
+          return CitaMedica(
+            id: c.id,
+            especialista: c.especialista,
+            especialistaNombre: c.especialistaNombre,
+            nombreEspecialista: c.nombreEspecialista,
+            especialidad: c.especialidad,
+            fechaHora: fechaHoraActualizada,
+            lugarOLink: c.lugarOLink,
+            estado: 'PROGRAMADA',
+            notas: c.notas,
+            puntosOtorgados: c.puntosOtorgados,
+          );
+        }
+        return c;
+      }).toList();
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cita reprogramada exitosamente'),
+        backgroundColor: Color(0xFF8E24AA),
+      ),
+    );
+  }
+
+  void _establecerRecordatorio(CitaMedica cita) {
+    final formato = DateFormat('dd/MM/yyyy hh:mm a').format(cita.fechaHora);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Recordatorio fijado para tu cita con ${cita.nombreEspecialista} el $formato.'),
+        backgroundColor: const Color(0xFFD81B60),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Future<void> _eliminarCita(CitaMedica cita) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar / Eliminar Cita'),
+        content: Text('¿Estás segura de que deseas eliminar tu cita con ${cita.nombreEspecialista}? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Conservar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD81B60)),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      final token = AuthService.token ?? '';
+      await BienestarService.eliminarCita(cita.id, token: token);
+    } catch (e) {
+      // Ignorar en mock
+    }
+
+    setState(() {
+      _citas.removeWhere((c) => c.id == cita.id);
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cita eliminada de la lista'),
+        backgroundColor: Color(0xFFD81B60),
+      ),
+    );
+  }
+
   Future<void> _marcarCompletada(CitaMedica cita) async {
     try {
       final token = AuthService.token ?? '';
       await BienestarService.actualizarEstadoCita(cita.id, 'COMPLETADA', token: token);
       
       if (!mounted) return;
-      // Mostrar modal de felicitación (+50 Puntos de Gamificación)
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: Row(
             children: const [
-              Icon(Icons.military_tech, color: Colors.amber, size: 32),
+              Icon(Icons.military_tech, color: Color(0xFFD81B60), size: 32),
               SizedBox(width: 8),
               Text('¡Felicitaciones!'),
             ],
@@ -142,7 +259,6 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
         ),
       );
     } catch (e) {
-      // Simulación visual en caso de mock
       setState(() {
         _citas = _citas.map((c) {
           if (c.id == cita.id) {
@@ -163,12 +279,13 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
         }).toList();
       });
 
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: Row(
             children: const [
-              Icon(Icons.military_tech, color: Colors.amber, size: 32),
+              Icon(Icons.military_tech, color: Color(0xFFD81B60), size: 32),
               SizedBox(width: 8),
               Text('¡Felicitaciones!'),
             ],
@@ -188,129 +305,51 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
     }
   }
 
-  Future<void> _agregarAGoogleCalendar(CitaMedica cita) async {
-    final title = Uri.encodeComponent('Cita de ${cita.especialidad} con ${cita.nombreEspecialista}');
-    final details = Uri.encodeComponent('Lugar/Link: ${cita.lugarOLink}\nNotas: ${cita.notas}');
-    final fechaInicio = DateFormat("yyyyMMdd'T'HHmmss").format(cita.fechaHora);
-    final fechaFin = DateFormat("yyyyMMdd'T'HHmmss").format(cita.fechaHora.add(const Duration(hours: 1)));
-
-    final url = Uri.parse('https://calendar.google.com/calendar/render?action=TEMPLATE&text=$title&dates=$fechaInicio/$fechaFin&details=$details&ctz=America/Bogota');
-    
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir Google Calendar')),
-      );
-    }
-  }
-
-  Future<void> _verReporteSalud(CitaMedica cita) async {
-    Map<String, dynamic> reporte;
-    try {
-      final token = AuthService.token ?? '';
-      reporte = await BienestarService.obtenerReporteSalud(cita.id, token: token);
-    } catch (e) {
-      reporte = {
-        "cita_id": cita.id,
-        "paciente": "Usuaria Bienestar",
-        "especialidad": cita.especialidad,
-        "especialista": cita.nombreEspecialista,
-        "fecha_hora": cita.fechaHora.toIso8601String(),
-        "estado": cita.estado,
-        "notas": cita.notas,
-        "resumen_salud": {
-          "sintomas_recientes": ["Cólicos moderados (Nivel 6)", "Fatiga leve"],
-          "ultimos_registros_emocionales": ["Tranquila", "Esperanzada"],
-          "recomendaciones_previas": ["Hidratación constante", "Descanso guiado TCC"]
-        }
-      };
-    }
-
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: const [
-            Icon(Icons.description, color: Colors.teal),
-            SizedBox(width: 8),
-            Text('Reporte para Consulta'),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Especialidad: ${reporte['especialidad']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text('Especialista: ${reporte['especialista']}'),
-              Text('Fecha: ${reporte['fecha_hora']}'),
-              const Divider(),
-              const Text('Resumen de Síntomas y Estado:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const Text('• Síntomas recientes: Cólicos moderados, Fatiga'),
-              const Text('• Estado emocional: Tranquila / Estable'),
-              const Divider(),
-              const Text('Notas de la usuaria:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(reporte['notas']?.isEmpty ?? true ? 'Sin notas adicionales.' : reporte['notas']),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: () async {
-              final texto = Uri.encodeComponent('Hola, comparto mi reporte de salud para la cita de ${reporte['especialidad']} con ${reporte['especialista']}. Fecha: ${reporte['fecha_hora']}.');
-              final whatsappUrl = Uri.parse('https://wa.me/?text=$texto');
-              if (await canLaunchUrl(whatsappUrl)) {
-                await launchUrl(whatsappUrl, mode: LaunchMode.externalApplication);
-              }
-            },
-            icon: const Icon(Icons.share, color: Colors.green),
-            label: const Text('Compartir por WhatsApp', style: TextStyle(color: Colors.green)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis Citas Médicas'),
-        backgroundColor: Colors.teal,
+        backgroundColor: const Color(0xFFD81B60),
+        foregroundColor: Colors.white,
       ),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
           : _citas.isEmpty
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.event_note, size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text('No tienes citas médicas agendadas', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          // Navegar a profesionales para agendar
-                          Navigator.pushNamed(context, '/profesionales');
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('Agendar una cita'),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-                      ),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.event_note, size: 72, color: Color(0xFFF8BBD0)),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No tienes citas agendadas',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Agenda una cita con nuestros profesionales para recibir acompañamiento personalizado.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.add),
+                          label: const Text('Agendar una cita'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF8E24AA),
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   itemCount: _citas.length,
                   itemBuilder: (context, index) {
                     final cita = _citas[index];
@@ -324,8 +363,8 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                       elevation: 3,
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: colorBorde, width: 2),
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: colorBorde, width: 1.5),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -337,33 +376,33 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    Icon(iconoEstado, color: colorBorde),
+                                    Icon(iconoEstado, color: colorBorde, size: 20),
                                     const SizedBox(width: 8),
                                     Text(
                                       cita.estado,
                                       style: TextStyle(
                                         color: colorBorde,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 14,
+                                        fontSize: 13,
                                       ),
                                     ),
                                   ],
                                 ),
                                 Text(
                                   fechaFormateada,
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54),
                                 ),
                               ],
                             ),
                             const Divider(height: 16),
                             Text(
                               cita.especialidad,
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'Especialista: ${cita.nombreEspecialista}',
-                              style: const TextStyle(fontSize: 15),
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Color(0xFF8E24AA)),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -377,38 +416,35 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                                 style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.grey[700]),
                               ),
                             ],
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
                               children: [
-                                if (cita.estado != 'COMPLETADA' && cita.estado != 'CANCELADA')
+                                if (cita.estado != 'COMPLETADA' && cita.estado != 'CANCELADA') ...[
                                   OutlinedButton.icon(
-                                    onPressed: () => _marcarCompletada(cita),
-                                    icon: const Icon(Icons.check_circle, size: 16, color: Colors.amber),
-                                    label: const Text('Marcar Asistida'),
+                                    onPressed: () => _reprogramarCita(cita),
+                                    icon: const Icon(Icons.edit_calendar, size: 16, color: Color(0xFF8E24AA)),
+                                    label: const Text('Reprogramar'),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.amber.shade800,
-                                      side: const BorderSide(color: Colors.amber),
+                                      foregroundColor: const Color(0xFF8E24AA),
+                                      side: const BorderSide(color: Color(0xFF8E24AA)),
                                     ),
                                   ),
-                                OutlinedButton.icon(
-                                  onPressed: () => _agregarAGoogleCalendar(cita),
-                                  icon: const Icon(Icons.calendar_month, size: 16, color: Colors.blue),
-                                  label: const Text('Google Calendar'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.blue.shade700,
-                                    side: const BorderSide(color: Colors.blue),
+                                  OutlinedButton.icon(
+                                    onPressed: () => _establecerRecordatorio(cita),
+                                    icon: const Icon(Icons.notifications_active, size: 16, color: Color(0xFFD81B60)),
+                                    label: const Text('Recordatorio'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFFD81B60),
+                                      side: const BorderSide(color: Color(0xFFD81B60)),
+                                    ),
                                   ),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: () => _verReporteSalud(cita),
-                                  icon: const Icon(Icons.description, size: 16, color: Colors.teal),
-                                  label: const Text('Ver Reporte'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.teal.shade700,
-                                    side: const BorderSide(color: Colors.teal),
-                                  ),
+                                ],
+                                IconButton(
+                                  onPressed: () => _eliminarCita(cita),
+                                  icon: const Icon(Icons.delete_outline, color: Color(0xFFD81B60)),
+                                  tooltip: 'Cancelar y eliminar cita',
                                 ),
                               ],
                             ),

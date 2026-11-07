@@ -192,16 +192,80 @@ class _TiendaScreenState extends State<TiendaScreen> {
       ),
       body: Column(
         children: [
-          // Banner Verde Superior
-          Card(
+          // Banner con Gradiente Corporativo
+          Container(
             margin: const EdgeInsets.all(16),
-            elevation: 4,
-            color: Colors.green.shade600,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: const ListTile(
-              leading: Icon(Icons.local_fire_department, color: Colors.white, size: 30),
-              title: Text('Productos Destacados', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-              subtitle: Text('Encuentra tu Bolsa Térmica de alivio y más.', style: TextStyle(color: Colors.white)),
+            child: Material(
+              color: Colors.transparent,
+              elevation: 4,
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  // Buscar el producto destacado real (ej. "Bolsa Térmica de Alivio" con id: 1) o usar el primer producto disponible
+                  final productoDestacado = _productos.isNotEmpty
+                      ? _productos.firstWhere(
+                          (p) => p.nombre.contains('Bolsa Térmica'),
+                          orElse: () => _productos.first,
+                        )
+                      : null;
+
+                  if (productoDestacado != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProductoDetalleScreen(
+                          productoId: productoDestacado.id,
+                          producto: productoDestacado,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Ink(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8E24AA), Color(0xFFD81B60)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Icon(Icons.local_fire_department, color: Colors.white, size: 36),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '¡Producto Destacado!',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Bolsa Térmica de Alivio - Alivio enfocado para dolor pélvico.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
           // Categorias Horizontal Filter

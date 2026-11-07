@@ -48,11 +48,8 @@ class _ParaTiScreenState extends State<ParaTiScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Se vuelve a consultar cuando esta pantalla reaparece: el menú principal
-    // oculta las pestañas con IndexedStack (Visibility.of lo detecta) y una
-    // ruta encima la deja sin animaciones (TickerMode). Así, al volver de
-    // registrar dolor o ánimo en Seguimiento, las recomendaciones ya cambian.
-    final visible = Visibility.of(context) && TickerMode.valuesOf(context).enabled;
+    // Se detecta si los tickers/animaciones de la ruta están activos
+    final visible = TickerMode.of(context);
     if (_visible == false && visible) _cargar();
     _visible = visible;
   }

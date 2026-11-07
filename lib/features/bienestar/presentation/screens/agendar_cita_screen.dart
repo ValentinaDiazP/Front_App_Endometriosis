@@ -163,7 +163,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Agendar Cita con ${widget.profesional.nombre}'),
-        backgroundColor: Colors.teal,
+        backgroundColor: const Color(0xFF8E24AA),
       ),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
@@ -181,8 +181,8 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                         children: [
                           const CircleAvatar(
                             radius: 30,
-                            backgroundColor: Colors.tealAccent,
-                            child: Icon(Icons.medical_services, size: 30, color: Colors.teal),
+                            backgroundColor: Color(0xFFF8BBD0),
+                            child: Icon(Icons.medical_services, size: 30, color: Color(0xFFD81B60)),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -221,7 +221,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                     child: InputDecorator(
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.calendar_today, color: Colors.teal),
+                        prefixIcon: Icon(Icons.calendar_today, color: Color(0xFFD81B60)),
                       ),
                       child: Text(
                         formatoFecha.format(_fechaSeleccionada),
@@ -245,7 +245,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                             return ChoiceChip(
                               label: Text('${slot.horaInicio} - ${slot.horaFin}'),
                               selected: seleccionado,
-                              selectedColor: Colors.teal,
+                              selectedColor: const Color(0xFFD81B60),
                               labelStyle: TextStyle(
                                 color: seleccionado ? Colors.white : Colors.black87,
                                 fontWeight: FontWeight.bold,
@@ -293,7 +293,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                       icon: const Icon(Icons.check_circle_outline),
                       label: const Text('Confirmar y Agendar Cita (Programada)'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
+                        backgroundColor: const Color(0xFFD81B60),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
