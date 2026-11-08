@@ -98,6 +98,13 @@ class _ReportesScreenState extends State<ReportesScreen> {
   void initState() {
     super.initState();
     _cargar();
+    AuthService.premiumActivado.addListener(_cargar);
+  }
+ 
+  @override
+  void dispose() {
+    AuthService.premiumActivado.removeListener(_cargar);
+    super.dispose();
   }
  
   Future<void> _cargar() async {
@@ -109,7 +116,12 @@ class _ReportesScreenState extends State<ReportesScreen> {
       final sintomas =
           await SintomasService.obtenerHistorialSintomas(widget.token);
       final animos = await SintomasService.obtenerCheckIns(widget.token);
-      final ciclos = await SintomasService.obtenerCiclos(widget.token);
+      // Los ciclos se cargan aparte: si fallan, el resto de Reportes sigue
+      // funcionando y solo se omite la comparación con la regla.
+      var ciclos = <RegistroCiclo>[];
+      try {
+        ciclos = await SintomasService.obtenerCiclos(widget.token);
+      } catch (_) {}
  
       // El plan se consulta aparte: si falla, la usuaria se trata como
       // gratuita y los reportes básicos siguen funcionando.
@@ -318,7 +330,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
       b.length,
     );
   }
-
+ 
   Set<int> _diasReglaClaves(List<RegistroCiclo> ciclos) {
     final claves = <int>{};
     for (final c in ciclos) {
@@ -328,7 +340,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
     }
     return claves;
   }
-
+ 
   bool _tieneReglaCompleta(List<RegistroCiclo> ciclos) {
     final inicioNorm = DateTime(_inicio.year, _inicio.month, _inicio.day);
     final hoyNorm = DateTime(_hoy.year, _hoy.month, _hoy.day);
@@ -1107,17 +1119,21 @@ class _ReportesScreenState extends State<ReportesScreen> {
             const SizedBox(height: 8),
             const Text(
               'Resumen de tu seguimiento en PDF, hallazgos sobre tu dolor y tu '
-              'ánimo, calendario mensual y cruces con sueño y estrés.',
+              'ánimo, calendario mensual, tu dolor en la regla y fuera de ella, '
+              'y cruces con sueño y estrés.',
             ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const PremiumInfoScreen(),
-                  ),
-                ),
+                onPressed: () async {
+                  final activado = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => const PremiumInfoScreen(),
+                    ),
+                  );
+                  if (activado == true && mounted) _cargar();
+                },
                 child: const Text('Conocer Premium'),
               ),
             ),
@@ -1228,7 +1244,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
       if (energias.isNotEmpty)
         'energía ${_media(energias.map((r) => r.energia!)).toStringAsFixed(1)}/5',
     ];
-
+ 
     final reglaClaves = _diasReglaClaves(_ciclos);
     final completa = _tieneReglaCompleta(_ciclos);
     final enReglaMedica = <int>[];
@@ -1872,17 +1888,17 @@ class _ReportesScreenState extends State<ReportesScreen> {
             ),
     );
   }
-
+ 
   Widget _tarjetaDolorCiclo({
     required Map<int, int> dolor,
     required List<RegistroCiclo> ciclos,
   }) {
     final reglaClaves = _diasReglaClaves(ciclos);
     final completa = _tieneReglaCompleta(ciclos);
-
+ 
     final enRegla = <int>[];
     final fueraRegla = <int>[];
-
+ 
     for (final entry in dolor.entries) {
       final fecha = _inicio.add(Duration(days: entry.key));
       if (reglaClaves.contains(_clave(fecha))) {
@@ -1891,9 +1907,9 @@ class _ReportesScreenState extends State<ReportesScreen> {
         fueraRegla.add(entry.value);
       }
     }
-
+ 
     final puedeComparar = completa && enRegla.length >= 3 && fueraRegla.length >= 3;
-
+ 
     return _tarjetaSimple(
       titulo: 'Dolor en la regla vs fuera de ella',
       subtitulo: 'Dolor promedio (0-10) en días con sangrado frente al resto del período.',

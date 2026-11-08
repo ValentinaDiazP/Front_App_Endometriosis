@@ -4,34 +4,42 @@ import '../../../../core/services/sintomas_service.dart';
 import '../../models/informacion_personal.dart';
 import '../../models/progreso_gamificacion.dart';
 import '../../../educativo/presentation/widgets/seccion_aprendizaje_perfil.dart';
-
+import '../../../seguimiento/presentation/screens/carrito_premium_screen.dart';
+ 
 class PerfilScreen extends StatefulWidget {
   final InformacionPersonal informacionPersonal;
   final String token;
-
+ 
   const PerfilScreen({
     super.key,
     required this.informacionPersonal,
     required this.token,
   });
-
+ 
   @override
   State<PerfilScreen> createState() => _PerfilScreenState();
 }
-
+ 
 class _PerfilScreenState extends State<PerfilScreen> {
   PerfilUsuaria? _perfil;
   ProgresoGamificacion? _progreso;
   bool _cargando = true;
   String? _error;
   int _version = 0; // al refrescar, también se recarga "Mi aprendizaje"
-
+ 
   @override
   void initState() {
     super.initState();
     _cargar();
+    AuthService.premiumActivado.addListener(_cargar);
   }
-
+ 
+  @override
+  void dispose() {
+    AuthService.premiumActivado.removeListener(_cargar);
+    super.dispose();
+  }
+ 
   Future<void> _cargar() async {
     setState(() {
       _cargando = true;
@@ -57,7 +65,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
       });
     }
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,7 +82,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
       body: _construirCuerpo(),
     );
   }
-
+ 
   /// Vuelve a la pantalla de inicio de sesión (la ruta '/' es AuthScreen) y
   /// borra la navegación anterior, para que "atrás" no regrese a la cuenta.
   Future<void> _confirmarCerrarSesion() async {
@@ -98,7 +106,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
     if (confirmar != true || !mounted) return;
     Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/', (_) => false);
   }
-
+ 
   Widget _construirCuerpo() {
     if (_cargando) {
       return const Center(child: CircularProgressIndicator());
@@ -118,14 +126,14 @@ class _PerfilScreenState extends State<PerfilScreen> {
         ),
       );
     }
-
+ 
     final perfil = _perfil;
     final progreso = _progreso;
     final nombre = perfil?.nombre.isNotEmpty == true
         ? perfil!.nombre
         : widget.informacionPersonal.nombre;
     final username = perfil?.username ?? '';
-
+ 
     return RefreshIndicator(
       onRefresh: _cargar,
       child: SingleChildScrollView(
@@ -165,7 +173,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
               ],
             ),
             const SizedBox(height: 24),
-
+ 
+            // Plan: insignia Premium o invitación a pasarse a Premium
+            _tarjetaPlan(perfil?.esPremium ?? false),
+ 
             // 2. Tarjeta Principal de Nivel y Progreso
             if (progreso != null) ...[
               Card(
@@ -222,7 +233,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
+ 
               // 3. Tarjeta de Rachas
               Row(
                 children: [
@@ -272,7 +283,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-
+ 
               // 4. Sección 'Historial de Puntos'
               const Text(
                 'Historial de puntos',
@@ -315,12 +326,12 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     ),
               const SizedBox(height: 24),
             ],
-
+ 
             // 5. Progreso del módulo Educativo (puntos de aprendizaje, nivel,
             // racha e insignias por ruta).
             SeccionAprendizajePerfil(key: ValueKey(_version), token: widget.token),
             const SizedBox(height: 24),
-
+ 
             // 6. Tarjeta Guía '¿Cómo ganar puntos y su propósito?'
             Card(
               elevation: 4,
@@ -367,7 +378,98 @@ class _PerfilScreenState extends State<PerfilScreen> {
       ),
     );
   }
-
+ 
+  Future<void> _irAPremium() async {
+    final activado = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(builder: (_) => const CarritoPremiumScreen()),
+    );
+    if (activado == true && mounted) _cargar();
+  }
+ 
+  Widget _tarjetaPlan(bool esPremium) {
+    final color = Theme.of(context).colorScheme.primary;
+    if (esPremium) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: Card(
+          elevation: 0,
+          color: color.withValues(alpha: 0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: color.withValues(alpha: 0.4)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.workspace_premium, color: color, size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Plan Premium',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tienes todos los reportes desbloqueados.',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.workspace_premium_outlined, color: color, size: 30),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Pásate a Premium',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Desbloquea reportes completos, comparación de tu dolor en la '
+                'regla y el resumen en PDF para tu consulta.',
+                style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _irAPremium,
+                child: const Text('Quiero Premium'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+ 
   Widget _buildGuiaItem({required String icon, required String titulo, required String proposito}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,19 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
-
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform, ValueNotifier;
+ 
 class RegistroExitoso {
   final String token;
   final int usuarioId;
   final String username;
   const RegistroExitoso({required this.token, required this.usuarioId, required this.username});
 }
-
+ 
 class LoginExitoso {
   final String token;
   const LoginExitoso({required this.token});
 }
-
+ 
 /// Perfil completo de la usuaria autenticada, tal como lo devuelve
 /// GET /api/usuarios/me/.
 class PerfilUsuaria {
@@ -26,7 +26,7 @@ class PerfilUsuaria {
   final int edad;
   final bool onboardingCompletado;
   final bool esPremium;
-
+ 
   const PerfilUsuaria({
     required this.usuarioId,
     required this.username,
@@ -38,7 +38,7 @@ class PerfilUsuaria {
     required this.onboardingCompletado,
     this.esPremium = false,
   });
-
+ 
   factory PerfilUsuaria.fromJson(Map<String, dynamic> json) {
     return PerfilUsuaria(
       usuarioId: json['usuario_id'] as int,
@@ -55,15 +55,19 @@ class PerfilUsuaria {
     );
   }
 }
-
+ 
 /// Cliente HTTP para /api/usuarios/ (registro, login, perfil, onboarding).
 class AuthService {
   AuthService._();
-
+ 
   static String? _currentToken;
   static String? get token => _currentToken;
   static set token(String? value) => _currentToken = value;
-
+ 
+  /// Sube cada vez que la usuaria activa Premium. Las pantallas que muestran
+  /// el plan (Perfil, Reportes) lo escuchan para recargarse solas.
+  static final ValueNotifier<int> premiumActivado = ValueNotifier<int>(0);
+ 
     /// 127.0.0.1 funciona en Chrome (web) y en escritorio. 10.0.2.2 es el
   /// alias especial que usa un emulador Android para referirse a la propia
   /// máquina donde corre el backend — sin esto, la app fallaría al probar
@@ -74,10 +78,10 @@ class AuthService {
     }
     return 'http://127.0.0.1:8000/api/usuarios';
   }
-
+ 
   static String _formatearFecha(DateTime fecha) =>
       fecha.toIso8601String().split('T').first;
-
+ 
   /// Extrae el primer mensaje de error de una respuesta de DRF, que puede
   /// venir como {"campo": ["mensaje"]} o como {"detail": "..."}.
   static String _extraerMensajeError(String body) {
@@ -92,7 +96,7 @@ class AuthService {
       return 'Ocurrió un error inesperado. Intenta de nuevo.';
     }
   }
-
+ 
   static Future<RegistroExitoso> registrar({
     required String username,
     required String password,
@@ -115,7 +119,7 @@ class AuthService {
           'fecha_diagnostico': _formatearFecha(fechaDiagnostico),
       }),
     );
-
+ 
     if (response.statusCode == 201) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       _currentToken = data['token'] as String;
@@ -127,7 +131,7 @@ class AuthService {
     }
     throw Exception(_extraerMensajeError(response.body));
   }
-
+ 
   static Future<LoginExitoso> login({
     required String username,
     required String password,
@@ -137,7 +141,7 @@ class AuthService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'username': username, 'password': password}),
     );
-
+ 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       _currentToken = data['token'] as String;
@@ -145,7 +149,7 @@ class AuthService {
     }
     throw Exception(_extraerMensajeError(response.body));
   }
-
+ 
   static Future<PerfilUsuaria> obtenerPerfil(String token) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/me/'),
@@ -156,7 +160,7 @@ class AuthService {
     }
     throw Exception(_extraerMensajeError(response.body));
   }
-
+ 
   static Future<void> completarOnboarding(String token) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/completar-onboarding/'),
@@ -165,5 +169,17 @@ class AuthService {
     if (response.statusCode != 200) {
       throw Exception(_extraerMensajeError(response.body));
     }
+  }
+ 
+  /// Activa el plan Premium de la usuaria autenticada.
+  static Future<void> activarPremium(String token) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/activar-premium/'),
+      headers: {'Authorization': 'Token $token'},
+    );
+    if (response.statusCode != 200) {
+      throw Exception(_extraerMensajeError(response.body));
+    }
+    premiumActivado.value++;
   }
 }
