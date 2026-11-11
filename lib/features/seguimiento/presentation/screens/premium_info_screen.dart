@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'carrito_premium_screen.dart';
  
 // Colores del dolor: verde (leve) → naranja (moderado) → rojo (intenso).
 const _verde = Color(0xFF81C784);
@@ -100,6 +101,23 @@ class PremiumInfoScreen extends StatelessWidget {
                   child: _demo(
                     context,
                     numero: '4',
+                    titulo: 'Tu dolor en la regla y fuera de ella',
+                    gancho:
+                        'Tu dolor promedio en los días de tu regla, frente al '
+                        'del resto del período.',
+                    visual: _visualCiclo(context),
+                    utilidad:
+                        'Ver si tu dolor se concentra en los días de tu regla o '
+                        'aparece también en otros momentos, para conversarlo con '
+                        'un profesional de la salud. Es una observación de tus '
+                        'registros, no un diagnóstico.',
+                  ),
+                ),
+                _seccion(
+                  context,
+                  child: _demo(
+                    context,
+                    numero: '5',
                     titulo: 'Qué se asocia con tu dolor',
                     gancho:
                         'Compara tu dolor según cuánto dormiste, tu estrés y tu '
@@ -115,7 +133,7 @@ class PremiumInfoScreen extends StatelessWidget {
                   context,
                   child: _demo(
                     context,
-                    numero: '5',
+                    numero: '6',
                     titulo: 'Qué tanto pudiste hacer',
                     gancho:
                         'Cuántos días pudiste hacer todo, casi todo, poco o '
@@ -130,7 +148,7 @@ class PremiumInfoScreen extends StatelessWidget {
                   context,
                   child: _demo(
                     context,
-                    numero: '6',
+                    numero: '7',
                     titulo: 'Medicación y alivio',
                     gancho:
                         'Lo que anotaste que tomaste y qué tanto te ayudó cada '
@@ -383,6 +401,7 @@ class PremiumInfoScreen extends StatelessWidget {
                 fila('Resumen de tu seguimiento en PDF', false),
                 fila('Hallazgos sobre tu dolor y tu ánimo', false),
                 fila('Calendario mensual de dolor y ánimo', false),
+                fila('Dolor en la regla vs fuera de ella', false),
                 fila('Cruces con sueño, estrés y energía', false),
                 fila('Qué tanto pudiste hacer cada día', false),
                 fila('Medicación y alivio', false),
@@ -402,20 +421,6 @@ class PremiumInfoScreen extends StatelessWidget {
       'Míralo en acción',
       sub: 'Estos ejemplos usan datos inventados para que veas cómo lucirían. '
           'Con Premium verás los tuyos.',
-    );
-  }
- 
-  Widget _etiquetaEjemplo() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Text(
-        'EJEMPLO · datos simulados',
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-      ),
     );
   }
  
@@ -467,8 +472,6 @@ class PremiumInfoScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _etiquetaEjemplo(),
-                const SizedBox(height: 12),
                 visual,
               ],
             ),
@@ -596,6 +599,10 @@ class PremiumInfoScreen extends StatelessWidget {
           linea('Zonas más frecuentes', 'Abdomen bajo, Lumbar, Pelvis'),
           linea('Síntomas más frecuentes', 'Fatiga, Náuseas'),
           linea('Otros tipos de dolor', 'al orinar (3 veces), al defecar (2 veces)'),
+          linea(
+            'Dolor y regla',
+            '7.4 en la regla (5 días) frente a 3.8 fuera de ella',
+          ),
           linea('Medicación', 'ibuprofeno en 6 registros · alivio: algo'),
           linea('Actividades limitadas', '5 de 20 días con respuesta'),
           const SizedBox(height: 12),
@@ -869,7 +876,28 @@ class PremiumInfoScreen extends StatelessWidget {
     );
   }
  
-  // ----- Visual 5: capacidad del día -----
+  // ----- Visual: dolor en la regla vs fuera de ella -----
+ 
+  Widget _visualCiclo(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Dolor promedio (0-10) según el momento de tu ciclo',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 8),
+        _barra('Durante la regla · 5 días', 7.4),
+        _barra('Fuera de la regla · 21 días', 3.8),
+        Text(
+          'Se compara solo con días en los que registraste dolor.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+ 
+  // ----- Visual 6: capacidad del día -----
  
   Widget _visualCapacidad(BuildContext context) {
     const datos = [
@@ -1114,14 +1142,15 @@ class PremiumInfoScreen extends StatelessWidget {
                 ),
               ),
               ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Los planes Premium llegan pronto. ¡Gracias por tu interés!',
-                      ),
+                onPressed: () async {
+                  final ok = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => const CarritoPremiumScreen(),
                     ),
                   );
+                  if (ok == true && context.mounted) {
+                    Navigator.of(context).pop(true);
+                  }
                 },
                 child: const Text('Quiero Premium'),
               ),

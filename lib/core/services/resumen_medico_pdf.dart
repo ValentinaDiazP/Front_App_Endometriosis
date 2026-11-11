@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
  
 import '../../features/seguimiento/models/historial_sintoma.dart';
+import '../../features/seguimiento/models/registro_ciclo.dart';
 import '../../features/seguimiento/models/registro_emocional.dart';
  
 /// Genera el "Resumen de mi seguimiento" en PDF a partir de los registros de la
@@ -31,6 +32,7 @@ class ResumenMedicoPdf {
   static Future<Uint8List> generar({
     required List<HistorialSintoma> sintomas,
     required List<RegistroEmocional> checkins,
+    required List<RegistroCiclo> ciclos,
     required DateTime inicio,
     required DateTime fin,
     String? nombre,
@@ -42,6 +44,37 @@ class ResumenMedicoPdf {
     final doc = pw.Document(title: 'Resumen de mi seguimiento', author: 'Florecer');
     final hoy = DateTime.now();
     final totalDias = fin.difference(inicio).inDays + 1;
+
+    // ----- Relación ciclo y dolor -----
+    final inicioNorm = DateTime(inicio.year, inicio.month, inicio.day);
+    final finNorm = DateTime(fin.year, fin.month, fin.day);
+
+    final tieneReglaCompleta = ciclos.any((c) {
+      if (c.fechaFin == null) return false;
+      final cIni = DateTime(c.fechaInicio.year, c.fechaInicio.month, c.fechaInicio.day);
+      final cFin = DateTime(c.fechaFin!.year, c.fechaFin!.month, c.fechaFin!.day);
+      return !cIni.isBefore(inicioNorm) && !cFin.isAfter(finNorm);
+    });
+
+    final diasReglaClaves = <int>{
+      for (final c in ciclos)
+        for (final d in c.diasCubiertos) _clave(d)
+    };
+
+    final dolorPorDiaCiclo = _dolorPorDia(sintomas);
+    final dolorRegla = <int>[];
+    final dolorFuera = <int>[];
+    for (final e in dolorPorDiaCiclo.entries) {
+      if (diasReglaClaves.contains(e.key)) {
+        dolorRegla.add(e.value);
+      } else {
+        dolorFuera.add(e.value);
+      }
+    }
+
+    final puedeCompararCiclo = tieneReglaCompleta &&
+        dolorRegla.length >= 3 &&
+        dolorFuera.length >= 3;
  
     // ----- Cifras del periodo -----
     final diasConDolor = <int>{for (final r in sintomas) _clave(r.fechaHora)};
@@ -197,6 +230,20 @@ class ResumenMedicoPdf {
               '**${animoIntenso.$1.toStringAsFixed(1)}** (${_dias(animoIntenso.$2)} '
               'con ambos datos), frente a **${animoIntenso.$3.toStringAsFixed(1)}** '
               '(${_dias(animoIntenso.$4)}) en los demás días.',
+            ),
+          if (puedeCompararCiclo)
+            _p(
+              'Durante los días de regla, su dolor promedio fue de '
+              '**${_media(dolorRegla).toStringAsFixed(1)} sobre 10** (${_dias(dolorRegla.length)} '
+              'con registro), frente a **${_media(dolorFuera).toStringAsFixed(1)} sobre 10** '
+              '(${_dias(dolorFuera.length)}) fuera de ella. '
+              'Información registrada para valoración de un profesional de la salud.',
+            )
+          else
+            _p(
+              'Ciclo menstrual y dolor: aún no hay suficientes registros para comparar '
+              'el dolor durante la regla frente a los días fuera de ella, para valoración '
+              'de un profesional de la salud.',
             ),
  
           // ----- Gráfica -----
