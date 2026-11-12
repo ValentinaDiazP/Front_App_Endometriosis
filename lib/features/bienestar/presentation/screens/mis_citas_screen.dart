@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../bienestar_colors.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../models/cita_medica.dart';
 import '../../services/bienestar_service.dart';
@@ -62,11 +62,11 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
   Color _obtenerColorCardFondo(String estado) {
     switch (estado) {
       case 'PROGRAMADA':
-        return const Color(0xFFF8BBD0).withOpacity(0.15); // Rosado Claro
+        return BienestarColors.rosaClaro.withOpacity(0.15); // Rosado Claro
       case 'CONFIRMADA':
         return const Color(0xFFFCE4EC); 
       case 'COMPLETADA':
-        return const Color(0xFFE1BEE7); // Morado claro
+        return BienestarColors.rosaMedio.withOpacity(0.3); // Rosa medio
       case 'CANCELADA':
         return Colors.grey.shade100;
       default:
@@ -77,15 +77,15 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
   Color _obtenerColorBorde(String estado) {
     switch (estado) {
       case 'PROGRAMADA':
-        return const Color(0xFFD81B60); // Rosado de marca
+        return BienestarColors.rosa; // Rosado de marca
       case 'CONFIRMADA':
-        return const Color(0xFF8E24AA); // Morado de marca
+        return BienestarColors.rosa; // Morado de marca
       case 'COMPLETADA':
-        return const Color(0xFF8E24AA);
+        return BienestarColors.rosa;
       case 'CANCELADA':
         return Colors.grey;
       default:
-        return const Color(0xFFD81B60);
+        return BienestarColors.rosa;
     }
   }
 
@@ -169,7 +169,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Cita reprogramada exitosamente'),
-        backgroundColor: Color(0xFF8E24AA),
+        backgroundColor: BienestarColors.rosa,
       ),
     );
   }
@@ -179,7 +179,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Recordatorio fijado para tu cita con ${cita.nombreEspecialista} el $formato.'),
-        backgroundColor: const Color(0xFFD81B60),
+        backgroundColor: BienestarColors.rosa,
         duration: const Duration(seconds: 4),
       ),
     );
@@ -198,7 +198,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD81B60)),
+            style: ElevatedButton.styleFrom(backgroundColor: BienestarColors.rosa),
             child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -222,11 +222,12 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Cita eliminada de la lista'),
-        backgroundColor: Color(0xFFD81B60),
+        backgroundColor: BienestarColors.rosa,
       ),
     );
   }
 
+  // ignore: unused_element
   Future<void> _marcarCompletada(CitaMedica cita) async {
     try {
       final token = AuthService.token ?? '';
@@ -238,7 +239,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
         builder: (context) => AlertDialog(
           title: Row(
             children: const [
-              Icon(Icons.military_tech, color: Color(0xFFD81B60), size: 32),
+              Icon(Icons.military_tech, color: BienestarColors.rosa, size: 32),
               SizedBox(width: 8),
               Text('¡Felicitaciones!'),
             ],
@@ -285,7 +286,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
         builder: (context) => AlertDialog(
           title: Row(
             children: const [
-              Icon(Icons.military_tech, color: Color(0xFFD81B60), size: 32),
+              Icon(Icons.military_tech, color: BienestarColors.rosa, size: 32),
               SizedBox(width: 8),
               Text('¡Felicitaciones!'),
             ],
@@ -310,7 +311,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis Citas Médicas'),
-        backgroundColor: const Color(0xFFD81B60),
+        backgroundColor: BienestarColors.rosa,
         foregroundColor: Colors.white,
       ),
       body: _cargando
@@ -322,7 +323,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.event_note, size: 72, color: Color(0xFFF8BBD0)),
+                        const Icon(Icons.event_note, size: 72, color: BienestarColors.rosaClaro),
                         const SizedBox(height: 16),
                         const Text(
                           'No tienes citas agendadas',
@@ -340,7 +341,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                           icon: const Icon(Icons.add),
                           label: const Text('Agendar una cita'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF8E24AA),
+                            backgroundColor: BienestarColors.rosa,
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -402,7 +403,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                             const SizedBox(height: 4),
                             Text(
                               'Especialista: ${cita.nombreEspecialista}',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Color(0xFF8E24AA)),
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: BienestarColors.rosa),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -424,26 +425,26 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                                 if (cita.estado != 'COMPLETADA' && cita.estado != 'CANCELADA') ...[
                                   OutlinedButton.icon(
                                     onPressed: () => _reprogramarCita(cita),
-                                    icon: const Icon(Icons.edit_calendar, size: 16, color: Color(0xFF8E24AA)),
+                                    icon: const Icon(Icons.edit_calendar, size: 16, color: BienestarColors.rosa),
                                     label: const Text('Reprogramar'),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFF8E24AA),
-                                      side: const BorderSide(color: Color(0xFF8E24AA)),
+                                      foregroundColor: BienestarColors.rosa,
+                                      side: const BorderSide(color: BienestarColors.rosa),
                                     ),
                                   ),
                                   OutlinedButton.icon(
                                     onPressed: () => _establecerRecordatorio(cita),
-                                    icon: const Icon(Icons.notifications_active, size: 16, color: Color(0xFFD81B60)),
+                                    icon: const Icon(Icons.notifications_active, size: 16, color: BienestarColors.rosa),
                                     label: const Text('Recordatorio'),
                                     style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFFD81B60),
-                                      side: const BorderSide(color: Color(0xFFD81B60)),
+                                      foregroundColor: BienestarColors.rosa,
+                                      side: const BorderSide(color: BienestarColors.rosa),
                                     ),
                                   ),
                                 ],
                                 IconButton(
                                   onPressed: () => _eliminarCita(cita),
-                                  icon: const Icon(Icons.delete_outline, color: Color(0xFFD81B60)),
+                                  icon: const Icon(Icons.delete_outline, color: BienestarColors.rosa),
                                   tooltip: 'Cancelar y eliminar cita',
                                 ),
                               ],

@@ -842,7 +842,7 @@ class _MainNavigationHubState extends State<MainNavigationHub> {
             ),
           );
         },
-        backgroundColor: const Color(0xFF8E44AD),
+        backgroundColor: const Color(0xFFEC407A),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.local_florist),
         label: const Text('Agente', style: TextStyle(fontWeight: FontWeight.bold)),
