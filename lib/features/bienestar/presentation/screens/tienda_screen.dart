@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../bienestar_colors.dart';
 import '../../models/producto.dart';
 import '../../services/bienestar_service.dart';
 import 'carrito_screen.dart';
@@ -155,7 +156,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Agregado: ${producto.nombre}'),
-          backgroundColor: const Color(0xFFF48FB1),
+          backgroundColor: BienestarColors.rosaMedio,
           duration: const Duration(seconds: 2),
         ),
       );
@@ -187,7 +188,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
           ],
         ),
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFFF48FB1),
+        backgroundColor: BienestarColors.rosaMedio,
         foregroundColor: Colors.white,
       ),
       body: Column(
@@ -225,7 +226,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
                 child: Ink(
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF8E24AA), Color(0xFFD81B60)],
+                      colors: [BienestarColors.rosa, BienestarColors.rosaMedio],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -286,7 +287,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
                   child: ChoiceChip(
                     label: Text(cat['label']!),
                     selected: isSelected,
-                    selectedColor: const Color(0xFFF48FB1),
+                    selectedColor: BienestarColors.rosaMedio,
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : Colors.grey.shade800,
                       fontWeight: FontWeight.bold,
@@ -295,7 +296,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: isSelected ? const Color(0xFFF48FB1) : Colors.grey.shade300,
+                        color: isSelected ? BienestarColors.rosaMedio : Colors.grey.shade300,
                       ),
                     ),
                     onSelected: (selected) {
@@ -373,7 +374,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
                                           style: const TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
-                                            color: Color(0xFFF48FB1),
+                                            color: BienestarColors.rosaMedio,
                                           ),
                                         ),
                                         const SizedBox(height: 2),
@@ -401,7 +402,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
                                           height: 30,
                                           child: ElevatedButton(
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFFF48FB1),
+                                              backgroundColor: BienestarColors.rosaMedio,
                                               foregroundColor: Colors.white,
                                               padding: EdgeInsets.zero,
                                               shape: RoundedRectangleBorder(

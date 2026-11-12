@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import '../bienestar_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../models/profesional.dart';
 import '../../models/disponibilidad_slot.dart';
-import '../../models/cita_medica.dart';
 import '../../services/bienestar_service.dart';
 
 class AgendarCitaScreen extends StatefulWidget {
@@ -163,7 +163,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Agendar Cita con ${widget.profesional.nombre}'),
-        backgroundColor: const Color(0xFF8E24AA),
+        backgroundColor: BienestarColors.rosa,
       ),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
@@ -181,8 +181,8 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                         children: [
                           const CircleAvatar(
                             radius: 30,
-                            backgroundColor: Color(0xFFF8BBD0),
-                            child: Icon(Icons.medical_services, size: 30, color: Color(0xFFD81B60)),
+                            backgroundColor: BienestarColors.rosaClaro,
+                            child: Icon(Icons.medical_services, size: 30, color: BienestarColors.rosa),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -201,7 +201,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   'Tarifa: ${widget.profesional.tarifa}',
-                                  style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(color: BienestarColors.rosaOscuro, fontWeight: FontWeight.w600),
                                 ),
                               ],
                             ),
@@ -221,7 +221,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                     child: InputDecorator(
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.calendar_today, color: Color(0xFFD81B60)),
+                        prefixIcon: Icon(Icons.calendar_today, color: BienestarColors.rosa),
                       ),
                       child: Text(
                         formatoFecha.format(_fechaSeleccionada),
@@ -245,7 +245,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                             return ChoiceChip(
                               label: Text('${slot.horaInicio} - ${slot.horaFin}'),
                               selected: seleccionado,
-                              selectedColor: const Color(0xFFD81B60),
+                              selectedColor: BienestarColors.rosa,
                               labelStyle: TextStyle(
                                 color: seleccionado ? Colors.white : Colors.black87,
                                 fontWeight: FontWeight.bold,
@@ -293,7 +293,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                       icon: const Icon(Icons.check_circle_outline),
                       label: const Text('Confirmar y Agendar Cita (Programada)'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD81B60),
+                        backgroundColor: BienestarColors.rosa,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -306,11 +306,11 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         onPressed: _contactarWhatsApp,
-                        icon: const Icon(Icons.chat, color: Colors.green),
+                        icon: const Icon(Icons.chat, color: BienestarColors.rosa),
                         label: const Text('Contactar por WhatsApp'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.green[700],
-                          side: const BorderSide(color: Colors.green),
+                          foregroundColor: BienestarColors.rosaOscuro,
+                          side: const BorderSide(color: BienestarColors.rosa),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),

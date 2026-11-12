@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../bienestar_colors.dart';
 import '../../models/profesional.dart';
 import 'agendar_cita_screen.dart';
 
@@ -28,8 +29,8 @@ class DetalleProfesionalScreen extends StatelessWidget {
               children: [
                 const CircleAvatar(
                   radius: 36,
-                  backgroundColor: Color(0xFFF48FB1),
-                  child: Icon(Icons.person, color: Colors.white, size: 40),
+                  backgroundColor: BienestarColors.rosaClaro,
+                  child: Icon(Icons.person, color: BienestarColors.rosa, size: 40),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -77,11 +78,11 @@ class DetalleProfesionalScreen extends StatelessWidget {
 
             // Banner de incentivo para agendar por la app (Sin emojis, usando Iconos vectoriales)
             Card(
-              color: Colors.purple[50],
+              color: BienestarColors.rosaClaro,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.purple.withOpacity(0.3)),
+                side: BorderSide(color: BienestarColors.rosa.withOpacity(0.3)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -90,12 +91,12 @@ class DetalleProfesionalScreen extends StatelessWidget {
                   children: [
                     const Text(
                       'Beneficios de agendar por Florecer',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.purple),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: BienestarColors.rosa),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: const [
-                        Icon(Icons.card_giftcard, size: 18, color: Colors.pinkAccent),
+                        Icon(Icons.card_giftcard, size: 18, color: BienestarColors.rosaMedio),
                         SizedBox(width: 8),
                         Expanded(child: Text('+50 puntos para tu nivel de bienestar al completar la cita.')),
                       ],
@@ -103,7 +104,7 @@ class DetalleProfesionalScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: const [
-                        Icon(Icons.analytics_outlined, size: 18, color: Colors.purple),
+                        Icon(Icons.analytics_outlined, size: 18, color: BienestarColors.rosa),
                         SizedBox(width: 8),
                         Expanded(child: Text('Tu reporte de síntomas se comparte de forma segura antes de la consulta.')),
                       ],
@@ -111,7 +112,7 @@ class DetalleProfesionalScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: const [
-                        Icon(Icons.verified_outlined, size: 18, color: Colors.teal),
+                        Icon(Icons.verified_outlined, size: 18, color: BienestarColors.rosa),
                         SizedBox(width: 8),
                         Expanded(child: Text('Desbloquea la opción de dejar tu reseña y calificar la atención.')),
                       ],
@@ -138,7 +139,7 @@ class DetalleProfesionalScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD81B60),
+                backgroundColor: BienestarColors.rosa,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -146,13 +147,13 @@ class DetalleProfesionalScreen extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: onContactar,
-              icon: const Icon(Icons.chat, color: Color(0xFF25D366)),
+              icon: const Icon(Icons.chat, color: BienestarColors.rosa),
               label: const Text(
                 'Contactar por WhatsApp',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: BienestarColors.rosaOscuro),
               ),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF25D366)),
+                side: const BorderSide(color: BienestarColors.rosa),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -215,17 +216,17 @@ class DetalleProfesionalScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.green[100],
+                color: BienestarColors.rosaClaro,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
-                  Icon(Icons.check_circle, size: 12, color: Colors.green),
+                  Icon(Icons.check_circle, size: 12, color: BienestarColors.rosa),
                   SizedBox(width: 2),
                   Text(
                     'Cita verificada',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: BienestarColors.rosaOscuro),
                   ),
                 ],
               ),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../bienestar_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/profesional.dart';
 import '../../services/bienestar_service.dart';
@@ -18,7 +20,10 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
   late Future<List<Profesional>> _futureProfesionales;
   String _filtroBusqueda = '';
   String _categoriaSeleccionada = 'Todos';
+  bool _soloDisponibles = false;
+  String _orden = 'Recomendados';
   late final ScrollController _scrollController;
+  final TextEditingController _busquedaController = TextEditingController();
 
   final List<String> _categorias = [
     'Todos',
@@ -41,6 +46,7 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _busquedaController.dispose();
     super.dispose();
   }
 
@@ -97,11 +103,13 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('Profesionales de Bienestar', style: TextStyle(fontSize: 18, color: Colors.white)),
-        backgroundColor: const Color(0xFFD81B60),
+        title: const Text('Profesionales de Bienestar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.textDark,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_today_outlined, color: Colors.white),
+            icon: const Icon(Icons.calendar_today_outlined, color: BienestarColors.rosa),
             tooltip: 'Mis Citas',
             onPressed: () {
               Navigator.of(context).push(
@@ -122,11 +130,12 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
             child: Column(
               children: [
                 TextField(
+                  controller: _busquedaController,
                   decoration: InputDecoration(
                     hintText: 'Buscar por nombre o especialidad...',
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    prefixIcon: const Icon(Icons.search, color: BienestarColors.rosa),
                     filled: true,
-                    fillColor: Colors.grey.shade100,
+                    fillColor: BienestarColors.rosaClaro,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -146,12 +155,12 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
                       height: 36,
                       width: 36,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
+                        color: BienestarColors.rosaClaro,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
                         padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.chevron_left, size: 20, color: Color(0xFF8E24AA)),
+                        icon: const Icon(Icons.chevron_left, size: 20, color: BienestarColors.rosa),
                         onPressed: () => _desplazarCategorias(-150),
                         tooltip: 'Desplazar a la izquierda',
                       ),
@@ -173,12 +182,14 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
                               child: ChoiceChip(
                                 label: Text(categoria),
                                 selected: seleccionada,
-                                selectedColor: const Color(0xFFD81B60),
+                                selectedColor: BienestarColors.rosa,
+                                showCheckmark: false,
+                                side: BorderSide.none,
                                 labelStyle: TextStyle(
-                                  color: seleccionada ? Colors.white : Colors.black87,
+                                  color: seleccionada ? Colors.white : AppTheme.textDark,
                                   fontWeight: seleccionada ? FontWeight.bold : FontWeight.normal,
                                 ),
-                                backgroundColor: Colors.grey.shade200,
+                                backgroundColor: BienestarColors.rosaClaro,
                                 onSelected: (bool selected) {
                                   setState(() {
                                     _categoriaSeleccionada = categoria;
@@ -195,15 +206,47 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
                       height: 36,
                       width: 36,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
+                        color: BienestarColors.rosaClaro,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
                         padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.chevron_right, size: 20, color: Color(0xFF8E24AA)),
+                        icon: const Icon(Icons.chevron_right, size: 20, color: BienestarColors.rosa),
                         onPressed: () => _desplazarCategorias(150),
                         tooltip: 'Desplazar a la derecha',
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    FilterChip(
+                      label: const Text('Disponibles hoy'),
+                      selected: _soloDisponibles,
+                      showCheckmark: false,
+                      selectedColor: BienestarColors.rosaMedio.withOpacity(0.25),
+                      backgroundColor: Colors.white,
+                      side: BorderSide(color: BienestarColors.rosaMedio.withOpacity(0.6)),
+                      avatar: Icon(
+                        Icons.event_available,
+                        size: 16,
+                        color: _soloDisponibles ? BienestarColors.rosa : BienestarColors.rosaMedio,
+                      ),
+                      onSelected: (v) => setState(() => _soloDisponibles = v),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.sort, size: 18, color: BienestarColors.rosa),
+                    const SizedBox(width: 4),
+                    DropdownButton<String>(
+                      value: _orden,
+                      underline: const SizedBox.shrink(),
+                      isDense: true,
+                      style: const TextStyle(fontSize: 13, color: AppTheme.textDark),
+                      items: const ['Recomendados', 'Nombre (A-Z)', 'Disponibles primero']
+                          .map((o) => DropdownMenuItem(value: o, child: Text(o)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _orden = v ?? 'Recomendados'),
                     ),
                   ],
                 ),
@@ -242,6 +285,8 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
                   final coincideBusqueda = nombreNorm.contains(_filtroBusqueda) ||
                       espNorm.contains(_filtroBusqueda);
 
+                  if (_soloDisponibles && !p.disponibleHoy) return false;
+
                   if (_categoriaSeleccionada == 'Todos') {
                     return coincideBusqueda;
                   }
@@ -259,17 +304,58 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
                   return coincideBusqueda && coincideCategoria;
                 }).toList();
 
+                if (_orden == 'Nombre (A-Z)') {
+                  profesionales.sort((a, b) => _normalizar(a.nombre).compareTo(_normalizar(b.nombre)));
+                } else if (_orden == 'Disponibles primero') {
+                  profesionales.sort((a, b) {
+                    if (a.disponibleHoy == b.disponibleHoy) return 0;
+                    return a.disponibleHoy ? -1 : 1;
+                  });
+                }
+
                 if (profesionales.isEmpty) {
-                  return const Center(
-                    child: Text('No se encontraron profesionales con esos criterios.'),
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.search_off, size: 56, color: BienestarColors.rosaMedio),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No encontramos profesionales con esos criterios.',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () => setState(() {
+                              _categoriaSeleccionada = 'Todos';
+                              _soloDisponibles = false;
+                              _filtroBusqueda = '';
+                              _busquedaController.clear();
+                            }),
+                            child: const Text('Quitar filtros'),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 }
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: profesionales.length,
+                  itemCount: profesionales.length + 1,
                   itemBuilder: (context, index) {
-                    final profesional = profesionales[index];
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          '${profesionales.length} profesional${profesionales.length == 1 ? '' : 'es'}',
+                          style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
+                        ),
+                      );
+                    }
+                    final profesional = profesionales[index - 1];
                     return _TarjetaProfesional(
                       profesional: profesional,
                       onTap: () {
@@ -309,12 +395,16 @@ class _TarjetaProfesional extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final disponible = profesional.disponibleHoy;
-    final colorBadge = disponible ? const Color(0xFF81C784) : const Color(0xFFFFCC80);
+    final colorBadge = disponible ? BienestarColors.rosa : BienestarColors.rosaMedio;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: BienestarColors.rosa.withOpacity(0.15)),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -328,13 +418,13 @@ class _TarjetaProfesional extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: const Color(0xFFF8BBD0),
+                    backgroundColor: BienestarColors.rosaClaro,
                     child: Text(
                       profesional.nombre.isNotEmpty ? profesional.nombre[0].toUpperCase() : 'P',
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFFD81B60),
+                        color: BienestarColors.rosa,
                       ),
                     ),
                   ),
@@ -393,7 +483,7 @@ class _TarjetaProfesional extends StatelessWidget {
                     child: Text(
                       profesional.etiquetaDisponibilidad,
                       style: TextStyle(
-                        color: disponible ? const Color(0xFF2E7D32) : const Color(0xFFEF6C00),
+                        color: disponible ? BienestarColors.rosaOscuro : BienestarColors.rosaOscuro,
                         fontWeight: FontWeight.bold,
                         fontSize: 11,
                       ),
@@ -416,7 +506,7 @@ class _TarjetaProfesional extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: onTap,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8E24AA),
+                        backgroundColor: BienestarColors.rosa,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -431,8 +521,10 @@ class _TarjetaProfesional extends StatelessWidget {
                       icon: const Icon(Icons.chat, size: 18),
                       label: const Text('WhatsApp'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.white,
+                        foregroundColor: BienestarColors.rosaOscuro,
+                        elevation: 0,
+                        side: const BorderSide(color: BienestarColors.rosa),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),

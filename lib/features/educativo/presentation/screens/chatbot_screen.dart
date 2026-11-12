@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, Tar
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../models/contenido_educativo.dart';
-import '../../services/educativo_service.dart';
 import '../screens/contenido_detail_screen.dart';
 
 class ChatMessage {
@@ -110,7 +109,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           'Content-Type': 'application/json',
           'Authorization': 'Token ${widget.token}',
         },
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 40));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -182,7 +181,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           'Authorization': 'Token ${widget.token}',
         },
         body: jsonEncode({'pregunta': preguntaLimpia}),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 40));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -351,7 +350,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
           // Carrusel Deslizable Inferior (Quick Questions) horizontal con las 3 preguntas exactas
           if (_sugerenciasTiempoReal.isEmpty)
             Container(
-              height: 56,
+              height: 72,
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
@@ -365,9 +364,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     padding: const EdgeInsets.only(right: 8.0, top: 4, bottom: 4),
                     child: ActionChip(
                       avatar: const Icon(Icons.lightbulb_outline, size: 16, color: Color(0xFFEC407A)),
-                      label: Text(
-                        preguntaTexto,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black87),
+                      label: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 230),
+                        child: Text(
+                          preguntaTexto,
+                          maxLines: 3,
+                          softWrap: true,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black87),
+                        ),
                       ),
                       backgroundColor: const Color(0xFFFCE4EC),
                       elevation: 0,
