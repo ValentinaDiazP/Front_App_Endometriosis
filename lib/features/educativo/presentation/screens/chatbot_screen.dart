@@ -10,22 +10,16 @@ class ChatMessage {
   final String text;
   final bool isUser;
   final ContenidoEducativo? articuloRelacionado;
+  final List<String> opcionesSugeridas;
   final DateTime timestamp;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     this.articuloRelacionado,
+    this.opcionesSugeridas = const [],
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
-}
-
-class CategoriaChat {
-  final String id;
-  final String nombre;
-  final IconData icono;
-
-  const CategoriaChat({required this.id, required this.nombre, required this.icono});
 }
 
 class ChatbotScreen extends StatefulWidget {
@@ -43,23 +37,23 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final List<ChatMessage> _messages = [];
   
   List<Map<String, dynamic>> _todasPreguntas = [];
-  List<String> _preguntasSugeridas = [
-    "¿Qué hacer en un brote de dolor?",
-    "Alimentos antiinflamatorios",
-    "Manejo de la fatiga crónica",
-    "Fisioterapia pélvica",
-    "¿Cómo gestionar la ansiedad?",
-  ];
   
-  final List<CategoriaChat> _categorias = [
-    const CategoriaChat(id: 'todos', nombre: 'Todos', icono: Icons.apps),
-    const CategoriaChat(id: 'sintomas', nombre: 'Síntomas y Dolor', icono: Icons.healing),
-    const CategoriaChat(id: 'nutricion', nombre: 'Nutrición', icono: Icons.restaurant),
-    const CategoriaChat(id: 'tratamientos', nombre: 'Tratamientos', icono: Icons.medical_services),
-    const CategoriaChat(id: 'bienestar', nombre: 'Calidad de Vida', icono: Icons.favorite),
+  // Carrusel deslizable horizontal con exactamente las 3 preguntas solicitadas
+  final List<Map<String, String>> _preguntasRapidas = [
+    {
+      "pregunta": "¿Cómo gestionar la ansiedad o el impacto emocional del diagnóstico?",
+      "articulo": "¿Qué es la endometriosis?"
+    },
+    {
+      "pregunta": "¿Cómo puedo manejar la fatiga crónica asociada a la endometriosis?",
+      "articulo": "Endometriosis: más allá del dolor físico"
+    },
+    {
+      "pregunta": "¿Qué puedo hacer durante un brote (flare-up) de dolor agudo?",
+      "articulo": "Entendiendo el dolor crónico"
+    },
   ];
-  String _categoriaSeleccionada = 'todos';
-  
+
   // Sugerencias en tiempo real mientras escribe
   List<String> _sugerenciasTiempoReal = [];
   bool _isLoading = false;
@@ -123,23 +117,44 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         setState(() {
           if (data['preguntas_frecuentes'] != null) {
             _todasPreguntas = List<Map<String, dynamic>>.from(data['preguntas_frecuentes']);
-            _preguntasSugeridas = _todasPreguntas
-                .map((item) => (item['pregunta'] ?? '').toString())
-                .where((p) => p.isNotEmpty)
-                .take(5)
-                .toList();
           }
           _messages.add(ChatMessage(
-            text: '¡Hola! Soy tu asistente experta en Endometriosis. Estoy aquí para ayudarte con el manejo del dolor, brotes, nutrición antiinflamatoria, fisioterapia y calidad de vida. ¿Qué te gustaría consultar hoy?',
+            text: "¡Hola! Soy tu asistente educativo sobre Endometriosis 🌸. Puedo orientarte de forma segura en estos 5 temas:\n"
+                  "1. Fisiopatología, síntomas y mecanismos del dolor\n"
+                  "2. Salud mental y afrontamiento psicoemocional\n"
+                  "3. Explicación de tratamientos médicos y quirúrgicos\n"
+                  "4. Nutrición, estilo de vida y terapias complementarias\n"
+                  "5. Autogestión del síntoma y comunicación médica\n\n"
+                  "Selecciona un número del 1 al 5 abajo o escribe tu duda.",
             isUser: false,
+            opcionesSugeridas: [
+              "1. Fisiopatología, síntomas y mecanismos del dolor",
+              "2. Salud mental y afrontamiento psicoemocional",
+              "3. Explicación de tratamientos médicos y quirúrgicos",
+              "4. Nutrición, estilo de vida y terapias complementarias",
+              "5. Autogestión del síntoma y comunicación médica"
+            ],
           ));
         });
       }
     } catch (_) {
       setState(() {
         _messages.add(ChatMessage(
-          text: '¡Hola! Soy tu asistente experta en Endometriosis. ¿En qué puedo ayudarte hoy?',
+          text: "¡Hola! Soy tu asistente educativo sobre Endometriosis 🌸. Puedo orientarte de forma segura en estos 5 temas:\n"
+                "1. Fisiopatología, síntomas y mecanismos del dolor\n"
+                "2. Salud mental y afrontamiento psicoemocional\n"
+                "3. Explicación de tratamientos médicos y quirúrgicos\n"
+                "4. Nutrición, estilo de vida y terapias complementarias\n"
+                "5. Autogestión del síntoma y comunicación médica\n\n"
+                "Selecciona un número del 1 al 5 abajo o escribe tu duda.",
           isUser: false,
+          opcionesSugeridas: [
+            "1. Fisiopatología, síntomas y mecanismos del dolor",
+            "2. Salud mental y afrontamiento psicoemocional",
+            "3. Explicación de tratamientos médicos y quirúrgicos",
+            "4. Nutrición, estilo de vida y terapias complementarias",
+            "5. Autogestión del síntoma y comunicación médica"
+          ],
         ));
       });
     } finally {
@@ -173,9 +188,53 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         final respuestaBot = data['respuesta'] ?? 'No hay respuesta disponible.';
         final articuloJson = data['articulo_relacionado'];
+        final List<String> opcionesDevueltas = data['opciones_sugeridas'] != null
+            ? List<String>.from(data['opciones_sugeridas'])
+            : [];
         
         ContenidoEducativo? articuloParsed;
-        if (articuloJson != null) {
+        
+        // Asociar tarjetas CTA si corresponde
+        if (preguntaLimpia.contains("ansiedad") || preguntaLimpia.contains("impacto emocional")) {
+          articuloParsed = ContenidoEducativo(
+            idContenido: 'c1',
+            idCategoriaFK: 'cat_endometriosis',
+            titulo: '¿Qué es la endometriosis?',
+            tipo: TipoContenido.texto,
+            nivel: NivelContenido.basico,
+            esPremium: false,
+            fechaPublicacion: DateTime.now(),
+            resumen: 'Una introducción clara a qué le pasa a tu cuerpo.',
+            cuerpo: 'La endometriosis es una condición en la que tejido similar al endometrio crece fuera del útero...',
+            minutosEstimados: 5,
+          );
+        } else if (preguntaLimpia.contains("fatiga crónica")) {
+          articuloParsed = ContenidoEducativo(
+            idContenido: 'c3',
+            idCategoriaFK: 'cat_autocuidado',
+            titulo: 'Endometriosis: más allá del dolor físico',
+            tipo: TipoContenido.video,
+            nivel: NivelContenido.basico,
+            esPremium: false,
+            fechaPublicacion: DateTime.now(),
+            resumen: 'Cómo la endometriosis también afecta el ánimo y qué ayuda a sobrellevarlo.',
+            cuerpo: 'Guion del audio de ejemplo...',
+            minutosEstimados: 5,
+          );
+        } else if (preguntaLimpia.contains("brote") || preguntaLimpia.contains("dolor agudo")) {
+          articuloParsed = ContenidoEducativo(
+            idContenido: 'c2',
+            idCategoriaFK: 'cat_dolor',
+            titulo: 'Entendiendo el dolor crónico',
+            tipo: TipoContenido.video,
+            nivel: NivelContenido.basico,
+            esPremium: false,
+            fechaPublicacion: DateTime.now(),
+            resumen: 'Por qué el dolor persiste incluso sin daño activo.',
+            cuerpo: 'Guion del video de ejemplo...',
+            minutosEstimados: 5,
+          );
+        } else if (articuloJson != null) {
           try {
             articuloParsed = ContenidoEducativo(
               idContenido: articuloJson['id'] ?? '',
@@ -196,16 +255,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         setState(() {
           if (data['preguntas_sugeridas'] != null) {
             _todasPreguntas = List<Map<String, dynamic>>.from(data['preguntas_sugeridas']);
-            _preguntasSugeridas = _todasPreguntas
-                .map((item) => (item['pregunta'] ?? '').toString())
-                .where((p) => p.isNotEmpty)
-                .take(5)
-                .toList();
           }
           _messages.add(ChatMessage(
             text: respuestaBot,
             isUser: false,
             articuloRelacionado: articuloParsed,
+            opcionesSugeridas: opcionesDevueltas,
           ));
         });
       } else {
@@ -251,51 +306,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       ),
       body: Column(
         children: [
-          // 1. Chips Horizontales por Categoría con colores Rosa Pastel / Rosa Intenso
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            color: Colors.white,
-            child: SizedBox(
-              height: 42,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: _categorias.length,
-                itemBuilder: (context, index) {
-                  final cat = _categorias[index];
-                  final seleccionado = _categoriaSeleccionada == cat.id;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ChoiceChip(
-                      avatar: Icon(
-                        cat.icono,
-                        size: 16,
-                        color: seleccionado ? Colors.white : const Color(0xFFC2185B),
-                      ),
-                      label: Text(
-                        cat.nombre,
-                        style: TextStyle(
-                          color: seleccionado ? Colors.white : Colors.black87,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      selected: seleccionado,
-                      selectedColor: const Color(0xFFEC407A), // Rosa intenso
-                      backgroundColor: const Color(0xFFFCE4EC), // Rosa claro pastel
-                      onSelected: (bool selected) {
-                        setState(() {
-                          _categoriaSeleccionada = cat.id;
-                        });
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          const Divider(height: 1, color: Colors.black12),
-
           // Historial del Chat
           Expanded(
             child: ListView.builder(
@@ -315,7 +325,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               child: LinearProgressIndicator(color: Color(0xFFF48FB1)),
             ),
 
-          // 2. Sugerencias en tiempo real mientras escribe o chips rápidos
+          // Sugerencias en tiempo real mientras escribe
           if (_sugerenciasTiempoReal.isNotEmpty)
             Container(
               constraints: const BoxConstraints(maxHeight: 120),
@@ -338,17 +348,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               ),
             ),
 
-          // Preguntas sugeridas por defecto cuando no escribe
-          if (_sugerenciasTiempoReal.isEmpty && _preguntasSugeridas.isNotEmpty)
-            SizedBox(
-              height: 48,
+          // Carrusel Deslizable Inferior (Quick Questions) horizontal con las 3 preguntas exactas
+          if (_sugerenciasTiempoReal.isEmpty)
+            Container(
+              height: 56,
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                itemCount: _preguntasSugeridas.length,
+                itemCount: _preguntasRapidas.length,
                 itemBuilder: (context, index) {
-                  final preguntaTexto = _preguntasSugeridas[index];
+                  final item = _preguntasRapidas[index];
+                  final preguntaTexto = item["pregunta"]!;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8.0, top: 4, bottom: 4),
                     child: ActionChip(
@@ -413,7 +425,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.all(12),
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
         decoration: BoxDecoration(
           color: isUser ? userBubbleColor : botBubbleColor,
           borderRadius: BorderRadius.circular(12),
@@ -431,7 +443,37 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 fontSize: 14,
               ),
             ),
-            // 3. Respuesta Guiada con Enlace Educativo estilizado en rosa de la app
+            // Chips interactivos de opciones del menú (2 niveles)
+            if (!isUser && msg.opcionesSugeridas.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: msg.opcionesSugeridas.map((opcion) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFFF48FB1)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () => _enviarPregunta(opcion),
+                      child: Text(
+                        opcion,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFC2185B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        softWrap: true,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+            // Tarjeta de Redirección (CTA Card) con enlace al Módulo Educativo
             if (msg.articuloRelacionado != null) ...[
               const SizedBox(height: 12),
               Container(
