@@ -49,6 +49,11 @@ class _ComunidadFeedScreenState extends State<ComunidadFeedScreen> with SingleTi
     });
   }
 
+  void _cambiarTab(int delta) {
+    final nuevoIndex = (_tabController.index + delta).clamp(0, _categorias.length - 1);
+    _tabController.animateTo(nuevoIndex);
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -595,13 +600,55 @@ class _ComunidadFeedScreenState extends State<ComunidadFeedScreen> with SingleTi
     return Scaffold(
       appBar: AppBar(
         title: const Text('Comunidad Florecer'),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          tabs: _categorias.map((cat) => Tab(text: cat['title'])).toList(),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            child: Row(
+              children: [
+                Container(
+                  height: 36,
+                  width: 36,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.chevron_left, size: 20, color: Colors.purple),
+                    onPressed: () => _cambiarTab(-1),
+                    tooltip: 'Categoría anterior',
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white70,
+                    indicatorColor: Colors.white,
+                    tabs: _categorias.map((cat) => Tab(text: cat['title'])).toList(),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Container(
+                  height: 36,
+                  width: 36,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.chevron_right, size: 20, color: Colors.purple),
+                    onPressed: () => _cambiarTab(1),
+                    tooltip: 'Siguiente categoría',
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         actions: [
           IconButton(

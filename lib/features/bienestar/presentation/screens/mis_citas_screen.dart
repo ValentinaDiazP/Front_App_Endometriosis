@@ -342,10 +342,25 @@ class _MisCitasScreenState extends State<MisCitasScreen> with SingleTickerProvid
   }
 
 
+                  Widget _buildListaCitas(List<CitaMedica> listaCitas, {required bool esHistorial}) {
+              if (listaCitas.isEmpty) {
+                return Center(
+                  child: Text(
+                    esHistorial
+                        ? 'No tienes citas en tu historial.'
+                        : 'No tienes citas próximas agendadas.',
+                    style: const TextStyle(color: Colors.black54, fontSize: 15),
+                  ),
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {},
+                child: ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: _citas.length,
+                  itemCount: listaCitas.length,
                   itemBuilder: (context, index) {
-                    final cita = _citas[index];
+                    final cita = listaCitas[index];
                     final colorFondo = _obtenerColorCardFondo(cita.estado);
                     final colorBorde = _obtenerColorBorde(cita.estado);
                     final iconoEstado = _obtenerIconoEstado(cita.estado);

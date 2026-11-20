@@ -17,6 +17,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
   List<Producto> _productos = [];
   bool _isLoading = true;
   String _categoriaSeleccionada = 'TODOS';
+  late final ScrollController _scrollController;
 
   final List<Map<String, String>> _categorias = [
     {'key': 'TODOS', 'label': 'Todos'},
@@ -128,7 +129,26 @@ class _TiendaScreenState extends State<TiendaScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     _cargarProductos();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _desplazarCategorias(double delta) {
+    final nuevoOffset = (_scrollController.offset + delta).clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+    _scrollController.animateTo(
+      nuevoOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   Future<void> _cargarProductos() async {
@@ -288,41 +308,78 @@ class _TiendaScreenState extends State<TiendaScreen> {
           // Categorias Horizontal Filter
           Container(
             height: 60,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _categorias.length,
-              itemBuilder: (context, index) {
-                final cat = _categorias[index];
-                final isSelected = _categoriaSeleccionada == cat['key'];
-                return Padding(
-                  padding: EdgeInsets.only(
-                    left: index == 0 ? 16 : 8,
-                    right: index == _categorias.length - 1 ? 16 : 0,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  height: 36,
+                  width: 36,
+                  decoration: BoxDecoration(
+                    color: BienestarColors.rosaClaro,
+                    shape: BoxShape.circle,
                   ),
-                  child: ChoiceChip(
-                    label: Text(cat['label']!),
-                    selected: isSelected,
-                    selectedColor: BienestarColors.rosaMedio,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey.shade800,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    backgroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(
-                        color: isSelected ? BienestarColors.rosaMedio : Colors.grey.shade300,
-                      ),
-                    ),
-                    onSelected: (selected) {
-                      setState(() {
-                        _categoriaSeleccionada = cat['key']!;
-                      });
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.chevron_left, size: 20, color: BienestarColors.rosa),
+                    onPressed: () => _desplazarCategorias(-150),
+                    tooltip: 'Desplazar a la izquierda',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _categorias.length,
+                    itemBuilder: (context, index) {
+                      final cat = _categorias[index];
+                      final isSelected = _categoriaSeleccionada == cat['key'];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          left: index == 0 ? 0 : 8,
+                          right: index == _categorias.length - 1 ? 0 : 8,
+                        ),
+                        child: ChoiceChip(
+                          label: Text(cat['label']!),
+                          selected: isSelected,
+                          selectedColor: BienestarColors.rosaMedio,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : Colors.grey.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected ? BienestarColors.rosaMedio : Colors.grey.shade300,
+                            ),
+                          ),
+                          onSelected: (selected) {
+                            setState(() {
+                              _categoriaSeleccionada = cat['key']!;
+                            });
+                          },
+                        ),
+                      );
                     },
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  height: 36,
+                  width: 36,
+                  decoration: BoxDecoration(
+                    color: BienestarColors.rosaClaro,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.chevron_right, size: 20, color: BienestarColors.rosa),
+                    onPressed: () => _desplazarCategorias(150),
+                    tooltip: 'Desplazar a la derecha',
+                  ),
+                ),
+              ],
             ),
           ),
           // Grid of products
