@@ -32,6 +32,7 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
     'Psicología',
     'Suelo Pélvico',
     'Virtual',
+    'Presencial',
   ];
 
   @override
@@ -291,12 +292,18 @@ class _ProfesionalesScreenState extends State<ProfesionalesScreen> {
                     return coincideBusqueda;
                   }
 
+                  if (_categoriaSeleccionada == 'Virtual') {
+                    return coincideBusqueda && p.atiendeVirtual;
+                  }
+                  if (_categoriaSeleccionada == 'Presencial') {
+                    return coincideBusqueda && p.atiendePresencial;
+                  }
+
                   String keyword = _normalizar(_categoriaSeleccionada);
                   if (keyword == 'ginecologia') keyword = 'ginec';
                   if (keyword == 'nutricion') keyword = 'nutri';
                   if (keyword == 'psicologia') keyword = 'psic';
                   if (keyword == 'suelo pelvico') keyword = 'pelv';
-                  if (keyword == 'virtual') keyword = 'virtual';
 
                   final coincideCategoria = espNorm.contains(keyword) ||
                       nombreNorm.contains(keyword);
@@ -470,6 +477,32 @@ class _TarjetaProfesional extends StatelessWidget {
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Divider(height: 1),
               ),
+              Row(
+                children: [
+                  Icon(Icons.videocam_outlined, size: 16, color: profesional.atiendeVirtual ? BienestarColors.rosa : Colors.grey.shade400),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Virtual',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: profesional.atiendeVirtual ? AppTheme.textDark : Colors.grey.shade400,
+                      fontWeight: profesional.atiendeVirtual ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(Icons.location_on_outlined, size: 16, color: profesional.atiendePresencial ? BienestarColors.rosa : Colors.grey.shade400),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Presencial',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: profesional.atiendePresencial ? AppTheme.textDark : Colors.grey.shade400,
+                      fontWeight: profesional.atiendePresencial ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

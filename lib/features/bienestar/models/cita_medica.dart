@@ -4,6 +4,7 @@ class CitaMedica {
   final String? especialistaNombre;
   final String nombreEspecialista;
   final String especialidad;
+  final String modalidad;
   final DateTime fechaHora;
   final String lugarOLink;
   final String estado; // PROGRAMADA, CONFIRMADA, COMPLETADA, CANCELADA
@@ -16,6 +17,7 @@ class CitaMedica {
     this.especialistaNombre,
     required this.nombreEspecialista,
     required this.especialidad,
+    required this.modalidad,
     required this.fechaHora,
     required this.lugarOLink,
     required this.estado,
@@ -30,6 +32,7 @@ class CitaMedica {
       especialistaNombre: json['especialista_nombre'] as String?,
       nombreEspecialista: json['nombre_especialista'] as String? ?? '',
       especialidad: json['especialidad'] as String? ?? '',
+      modalidad: json['modalidad'] as String? ?? 'VIRTUAL',
       fechaHora: json['fecha_hora'] != null
           ? DateTime.parse(json['fecha_hora'])
           : DateTime.now(),
@@ -45,6 +48,7 @@ class CitaMedica {
       if (especialista != null) 'especialista': especialista,
       'nombre_especialista': nombreEspecialista,
       'especialidad': especialidad,
+      'modalidad': modalidad,
       'fecha_hora': fechaHora.toIso8601String(),
       'lugar_o_link': lugarOLink,
       'estado': estado,

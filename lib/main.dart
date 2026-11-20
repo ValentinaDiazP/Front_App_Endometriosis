@@ -101,6 +101,13 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _ingresando = false;
 
+  @override
+  void dispose() {
+    _userController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _handleLogin() async {
     final username = _userController.text.trim();
     final password = _passwordController.text;
@@ -158,17 +165,17 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  void _abrirModalOlvidoPassword() {
+    showDialog(
+      context: context,
+      builder: (context) => const _RecuperarPasswordModal(),
+    );
+  }
+
   void _irARegistro() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const RegistroScreen()),
     );
-  }
-
-  @override
-  void dispose() {
-    _userController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 
   @override
@@ -218,7 +225,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _ingresando ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
@@ -233,13 +240,180 @@ class _AuthScreenState extends State<AuthScreen> {
                       )
                     : const Text('Ingresar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: _ingresando ? null : _abrirModalOlvidoPassword,
+                child: const Text('¿Olvidaste tu contraseña?'),
+              ),
+              const SizedBox(height: 4),
               TextButton(
                 onPressed: _ingresando ? null : _irARegistro,
                 child: const Text('¿No tienes cuenta? Regístrate'),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecuperarPasswordModal extends StatefulWidget {
+  const _RecuperarPasswordModal();
+
+  @override
+  State<_RecuperarPasswordModal> createState() => _RecuperarPasswordModalState();
+}
+
+class _RecuperarPasswordModalState extends State<_RecuperarPasswordModal> {
+  int _paso = 1;
+  final _inputController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _codigoController = TextEditingController();
+  String? _codigoGenerado;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _inputController.dispose();
+    _passwordController.dispose();
+    _codigoController.dispose();
+    super.dispose();
+  }
+
+  void _generarCodigo() {
+    final val = _inputController.text.trim();
+    if (val.isEmpty) {
+      setState(() => _error = 'Ingresa tu celular o usuario');
+      return;
+    }
+    final codigo = (100000 + DateTime.now().millisecondsSinceEpoch % 900000).toString();
+    setState(() {
+      _codigoGenerado = codigo;
+      _error = null;
+      _paso = 2;
+    });
+  }
+
+  Future<void> _guardarNuevaPassword() async {
+    final codigoIngresado = _codigoController.text.trim();
+    final nuevaPass = _passwordController.text;
+
+    if (codigoIngresado != _codigoGenerado) {
+      setState(() => _error = 'El código de 6 dígitos es incorrecto');
+      return;
+    }
+    if (nuevaPass.length < 6) {
+      setState(() => _error = 'La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      await AuthService.solicitarRecuperacionPassword(
+        usernameOrCelular: _inputController.text.trim(),
+        password: nuevaPass,
+      );
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('¡Contraseña actualizada con éxito!'),
+          backgroundColor: AppColors.secondary,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 24, 20, bottomInset + 24),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _paso == 1 ? 'Paso 1: Enviar Código' : 'Paso 2: Nueva Contraseña',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_error != null) ...[
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppColors.danger.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Text(_error!, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (_paso == 1) ...[
+              const Text('Ingresa tu celular o usuario para recibir el código de verificación.', style: TextStyle(fontSize: 14, color: Colors.grey)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _inputController,
+                enabled: !_isLoading,
+                decoration: const InputDecoration(labelText: 'Celular o Usuario', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _generarCodigo,
+                child: const Text('Enviar código'),
+              ),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: AppColors.secondary.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+                child: Column(
+                  children: [
+                    const Text('Código temporal de 6 dígitos:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                    const SizedBox(height: 4),
+                    Text(_codigoGenerado ?? '', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 4)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _codigoController,
+                enabled: !_isLoading,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Código de 6 dígitos', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                enabled: !_isLoading,
+                decoration: const InputDecoration(labelText: 'Nueva contraseña (mínimo 6 caracteres)', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _guardarNuevaPassword,
+                child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Guardar contraseña'),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -262,10 +436,12 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _passwordController = TextEditingController();
   final _nombreController = TextEditingController();
   final _diagnosticoController = TextEditingController();
+  final _celularController = TextEditingController();
 
   DateTime? _fechaNacimiento;
   DateTime? _fechaDiagnostico;
   bool _enviando = false;
+  bool _autorizaDatos = false;
 
   @override
   void dispose() {
@@ -273,6 +449,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _passwordController.dispose();
     _nombreController.dispose();
     _diagnosticoController.dispose();
+    _celularController.dispose();
     super.dispose();
   }
 
@@ -296,11 +473,101 @@ class _RegistroScreenState extends State<RegistroScreen> {
     if (fecha != null) onFechaSeleccionada(fecha);
   }
 
+  void _abrirPoliticaDatos() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(24),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Política de Tratamiento de Datos',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              const SizedBox(height: 12),
+              const Text(
+                '1. Responsable y Finalidad',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Florecer Bienestar S.A.S. (en adelante "Florecer") es el responsable del tratamiento de sus datos personales y sensibles de salud. La finalidad de la recolección es la prestación de servicios de bienestar, seguimiento de ciclos y salud femenina, personalización de contenidos psicoeducativos, agendamiento de citas médicas y soporte en la plataforma.',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '2. Carácter Facultativo de Datos Sensibles de Salud',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'El usuario no está obligado a autorizar el tratamiento de datos sensibles (síntomas, diagnósticos, ciclo menstrual). Sin embargo, al tratarse de una aplicación especializada en salud femenina, dichos datos son indispensables para el funcionamiento y personalización de las funciones de seguimiento y bienestar.',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '3. Almacenamiento Seguro en la Nube',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Sus datos son almacenados de forma segura en bases de datos PostgreSQL / Neon Cloud con cifrado robusto HTTPS/TLS en tránsito y en reposo. Contamos con autorización de transmisión internacional de datos conforme al Artículo 26 de la Ley 1581 de 2012 bajo estrictos estándares de seguridad y confidencialidad.',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '4. Canal de Contacto y Derechos ARCO',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Usted tiene derecho a conocer, actualizar, rectificar sus datos, suprimir su información y revocar la autorización en cualquier momento. Para ejercer sus derechos ARCO o realizar consultas, puede contactarnos a través de nuestro canal oficial: soporte@florecerbienestar.com.',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido y de acuerdo'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
   Future<void> _registrar() async {
     if (!_formKey.currentState!.validate()) return;
     if (_fechaNacimiento == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecciona tu fecha de nacimiento')),
+      );
+      return;
+    }
+    if (!_autorizaDatos) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes autorizar el tratamiento de datos personales para continuar')),
       );
       return;
     }
@@ -314,6 +581,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
         fechaNacimiento: _fechaNacimiento!,
         diagnostico: _diagnosticoController.text,
         fechaDiagnostico: _fechaDiagnostico,
+        celular: _celularController.text.trim(),
       );
 
       if (!mounted) return;
@@ -401,6 +669,25 @@ class _RegistroScreenState extends State<RegistroScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _celularController,
+                enabled: !_enviando,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Celular (10 dígitos)',
+                  hintText: 'Ej: 3001234567',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Ingresa tu celular';
+                  final limpio = v.trim();
+                  if (limpio.length != 10 || int.tryParse(limpio) == null) {
+                    return 'Debe ser un número válido de 10 dígitos';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _passwordController,
                 obscureText: true,
                 enabled: !_enviando,
@@ -414,7 +701,26 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+              CheckboxListTile(
+                value: _autorizaDatos,
+                onChanged: _enviando ? null : (val) => setState(() => _autorizaDatos = val ?? false),
+                title: const Text(
+                  'He leído y autorizo de manera previa, expresa e informada el tratamiento de mis datos personales y datos sensibles de salud conforme a la Ley 1581 de 2012.',
+                  style: TextStyle(fontSize: 13),
+                ),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: _abrirPoliticaDatos,
+                  child: const Text('Ver Política de Tratamiento de Datos Personales'),
+                ),
+              ),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _enviando ? null : _registrar,
                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),

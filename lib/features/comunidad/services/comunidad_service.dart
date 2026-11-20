@@ -77,6 +77,18 @@ class ComunidadService {
     return response.statusCode == 200 || response.statusCode == 201;
   }
 
+  // 1.B. Dar o quitar Me Gusta en Comentario
+  Future<bool> reaccionarComentario(int comentarioId, String? token) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/comentarios/$comentarioId/reaccionar/'),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Token $token',
+      },
+    );
+    return response.statusCode == 200 || response.statusCode == 201;
+  }
+
   // 2. Enviar Comentario
   Future<bool> comentar(int publicacionId, String texto, String? token) async {
     final response = await http.post(

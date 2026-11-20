@@ -104,6 +104,7 @@ class AuthService {
     required DateTime fechaNacimiento,
     String? diagnostico,
     DateTime? fechaDiagnostico,
+    String? celular,
   }) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/registro/'),
@@ -117,6 +118,8 @@ class AuthService {
           'diagnostico': diagnostico.trim(),
         if (fechaDiagnostico != null)
           'fecha_diagnostico': _formatearFecha(fechaDiagnostico),
+        if (celular != null && celular.trim().isNotEmpty)
+          'celular': celular.trim(),
       }),
     );
  
@@ -181,5 +184,32 @@ class AuthService {
       throw Exception(_extraerMensajeError(response.body));
     }
     premiumActivado.value++;
+  }
+
+  static Future<void> solicitarRecuperacionPassword({
+    required String usernameOrCelular,
+    required String password,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/recuperar-password/'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'username': usernameOrCelular,
+        'password': password,
+      }),
+    );
+    if (response.statusCode != 200) {
+      throw Exception(_extraerMensajeError(response.body));
+    }
+  }
+
+  static Future<void> eliminarCuenta(String token) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/me/'),
+      headers: {'Authorization': 'Token $token'},
+    );
+    if (response.statusCode != 204 && response.statusCode != 200) {
+      throw Exception(_extraerMensajeError(response.body));
+    }
   }
 }

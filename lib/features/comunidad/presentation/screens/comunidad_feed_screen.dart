@@ -55,9 +55,107 @@ class _ComunidadFeedScreenState extends State<ComunidadFeedScreen> with SingleTi
     super.dispose();
   }
 
-  // ===========================================================================
-  // 1. DIÁLOGO PARA REPORTAR PUBLICACIÓN
-  // ===========================================================================
+  // Almacenamiento local de publicaciones por categoría para permitir actualización optimista fluida
+  final Map<String, List<Publicacion>> _cachePublicaciones = {};
+
+  Future<List<Publicacion>> _cargarPublicacionesCache(String categoriaKey) async {
+    if (_cachePublicaciones.containsKey(categoriaKey)) {
+      return _cachePublicaciones[categoriaKey]!;
+    }
+    final fetched = await _service.obtenerPublicaciones(token: widget.token, categoria: categoriaKey);
+    _cachePublicaciones[categoriaKey] = fetched;
+    return fetched;
+  }
+
+  Future<void> _reaccionarOptimista(Publicacion post, String categoriaKey) async {
+    final bool anteriorMeGusta = post.meGusta;
+    final int anteriorTotalLikes = post.totalLikes;
+
+    final bool nuevoMeGusta = !anteriorMeGusta;
+    final int nuevoTotalLikes = anteriorTotalLikes + (nuevoMeGusta ? 1 : -1);
+
+    // 1. Actualización inmediata local en memoria
+    setState(() {
+      final lista = _cachePublicaciones[categoriaKey];
+      if (lista != null) {
+        final index = lista.indexWhere((p) => p.id == post.id);
+        if (index != -1) {
+          lista[index] = lista[index].copyWith(
+            meGusta: nuevoMeGusta,
+            totalLikes: nuevoTotalLikes >= 0 ? nuevoTotalLikes : 0,
+          );
+        }
+      }
+    });
+
+    // 2. Llamada al backend en segundo plano
+    try {
+      final exito = await _service.reaccionar(post.id, widget.token);
+      if (!exito) {
+        throw Exception('Error en servidor');
+      }
+    } catch (_) {
+      // 3. Reversión en caso de error de red
+      if (!mounted) return;
+      setState(() {
+        final lista = _cachePublicaciones[categoriaKey];
+        if (lista != null) {
+          final index = lista.indexWhere((p) => p.id == post.id);
+          if (index != -1) {
+            lista[index] = lista[index].copyWith(
+              meGusta: anteriorMeGusta,
+              totalLikes: anteriorTotalLikes,
+            );
+          }
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al actualizar "Me gusta". Inténtalo de nuevo.')),
+      );
+    }
+  }
+
+  Future<void> _reaccionarComentarioOptimista(Publicacion post, Comentario comentario, StateSetter setStateModal) async {
+    final bool anteriorMeGusta = comentario.meGusta;
+    final int anteriorTotalLikes = comentario.totalLikes;
+
+    final bool nuevoMeGusta = !anteriorMeGusta;
+    final int nuevoTotalLikes = anteriorTotalLikes + (nuevoMeGusta ? 1 : -1);
+
+    // Actualización local inmediata en el modal y en el post
+    setStateModal(() {
+      final idx = post.comentarios.indexWhere((c) => c.id == comentario.id);
+      if (idx != -1) {
+        post.comentarios[idx] = post.comentarios[idx].copyWith(
+          meGusta: nuevoMeGusta,
+          totalLikes: nuevoTotalLikes >= 0 ? nuevoTotalLikes : 0,
+        );
+      }
+    });
+    setState(() {});
+
+    try {
+      final exito = await _service.reaccionarComentario(comentario.id, widget.token);
+      if (!exito) {
+        throw Exception('Error');
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setStateModal(() {
+        final idx = post.comentarios.indexWhere((c) => c.id == comentario.id);
+        if (idx != -1) {
+          post.comentarios[idx] = post.comentarios[idx].copyWith(
+            meGusta: anteriorMeGusta,
+            totalLikes: anteriorTotalLikes,
+          );
+        }
+      });
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al dar Me gusta al comentario')),
+      );
+    }
+  }
   void _mostrarDialogoReporte(int publicacionId) {
     final TextEditingController motivoController = TextEditingController();
 
@@ -345,15 +443,15 @@ class _ComunidadFeedScreenState extends State<ComunidadFeedScreen> with SingleTi
   // ===========================================================================
   Widget _buildHiloView(String categoriaKey, String bannerText) {
     return FutureBuilder<List<Publicacion>>(
-      future: _service.obtenerPublicaciones(token: widget.token, categoria: categoriaKey),
+      future: _cargarPublicacionesCache(categoriaKey),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting && !_cachePublicaciones.containsKey(categoriaKey)) {
           return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
+        } else if (snapshot.hasError && !_cachePublicaciones.containsKey(categoriaKey)) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
 
-        final publicaciones = snapshot.data ?? [];
+        final publicaciones = _cachePublicaciones[categoriaKey] ?? snapshot.data ?? [];
 
         return ListView(
           padding: const EdgeInsets.all(12),
@@ -453,10 +551,7 @@ class _ComunidadFeedScreenState extends State<ComunidadFeedScreen> with SingleTi
                           Row(
                             children: [
                               InkWell(
-                                onTap: () async {
-                                  await _service.reaccionar(post.id, widget.token);
-                                  setState(() {});
-                                },
+                                onTap: () => _reaccionarOptimista(post, categoriaKey),
                                 child: Row(
                                   children: [
                                     Icon(

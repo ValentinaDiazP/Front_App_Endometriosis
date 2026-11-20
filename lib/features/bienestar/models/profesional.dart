@@ -5,6 +5,8 @@ class Profesional {
   final String tarifa;
   final String disponibilidad;
   final String whatsapp;
+  final bool atiendeVirtual;
+  final bool atiendePresencial;
 
   const Profesional({
     required this.id,
@@ -13,6 +15,8 @@ class Profesional {
     required this.tarifa,
     required this.disponibilidad,
     required this.whatsapp,
+    this.atiendeVirtual = true,
+    this.atiendePresencial = true,
   });
 
   bool get disponibleHoy {
@@ -36,6 +40,8 @@ class Profesional {
       disponibilidad:
           (json['availability'] ?? json['disponibilidad'] ?? '') as String,
       whatsapp: (json['whatsapp'] ?? json['telefono'] ?? '') as String,
+      atiendeVirtual: json['atiende_virtual'] ?? true,
+      atiendePresencial: json['atiende_presencial'] ?? true,
     );
   }
 }

@@ -193,25 +193,22 @@ class _TiendaScreenState extends State<TiendaScreen> {
       ),
       body: Column(
         children: [
-          // Banner con Gradiente Corporativo
-          Container(
-            margin: const EdgeInsets.all(16),
-            child: Material(
-              color: Colors.transparent,
-              elevation: 4,
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  // Buscar el producto destacado real (ej. "Bolsa Térmica de Alivio" con id: 1) o usar el primer producto disponible
-                  final productoDestacado = _productos.isNotEmpty
-                      ? _productos.firstWhere(
-                          (p) => p.nombre.contains('Bolsa Térmica'),
-                          orElse: () => _productos.first,
-                        )
-                      : null;
+          // Banner con Gradiente Corporativo Dinámico
+          if (_productos.isNotEmpty) () {
+            final productoDestacado = _productos.firstWhere(
+              (p) => p.nombre.toLowerCase().contains('bolsa térmica'),
+              orElse: () => _productos.reduce((curr, next) => curr.rating > next.rating ? curr : next),
+            );
 
-                  if (productoDestacado != null) {
+            return Container(
+              margin: const EdgeInsets.all(16),
+              child: Material(
+                color: Colors.transparent,
+                elevation: 4,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -221,54 +218,73 @@ class _TiendaScreenState extends State<TiendaScreen> {
                         ),
                       ),
                     );
-                  }
-                },
-                child: Ink(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [BienestarColors.rosa, BienestarColors.rosaMedio],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                  },
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [BienestarColors.rosa, BienestarColors.rosaMedio],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.local_fire_department, color: Colors.white, size: 36),
-                        SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '¡Producto Destacado!',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.local_fire_department, color: Colors.white, size: 36),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      '¡Producto Destacado!',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '⭐ ${productoDestacado.rating.toStringAsFixed(1)}',
+                                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Bolsa Térmica de Alivio - Alivio enfocado para dolor pélvico.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white70,
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${productoDestacado.nombre} - ${productoDestacado.descripcion}',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
-                      ],
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          }() else const SizedBox.shrink(),
           // Categorias Horizontal Filter
           Container(
             height: 60,
