@@ -118,7 +118,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             _todasPreguntas = List<Map<String, dynamic>>.from(data['preguntas_frecuentes']);
           }
           _messages.add(ChatMessage(
-            text: "¡Hola! Soy tu asistente educativo sobre Endometriosis 🌸. Puedo orientarte de forma segura en estos 5 temas:\n"
+            text: "¡Hola! Soy tu Flor educativo sobre Endometriosis 🌸. Puedo orientarte de forma segura en estos 5 temas:\n"
                   "1. Fisiopatología, síntomas y mecanismos del dolor\n"
                   "2. Salud mental y afrontamiento psicoemocional\n"
                   "3. Explicación de tratamientos médicos y quirúrgicos\n"
@@ -139,7 +139,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     } catch (_) {
       setState(() {
         _messages.add(ChatMessage(
-          text: "¡Hola! Soy tu asistente educativo sobre Endometriosis 🌸. Puedo orientarte de forma segura en estos 5 temas:\n"
+          text: "¡Hola! Soy tu Flor educativo sobre Endometriosis 🌸. Puedo orientarte de forma segura en estos 5 temas:\n"
                 "1. Fisiopatología, síntomas y mecanismos del dolor\n"
                 "2. Salud mental y afrontamiento psicoemocional\n"
                 "3. Explicación de tratamientos médicos y quirúrgicos\n"
@@ -300,7 +300,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Asistente Endometriosis'),
+        title: const Text('Flor Endometriosis'),
         backgroundColor: const Color(0xFFF48FB1),
       ),
       body: Column(

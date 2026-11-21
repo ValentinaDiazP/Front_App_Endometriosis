@@ -24,12 +24,17 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
   String _modalidadSeleccionada = 'VIRTUAL';
   int _citasPrevias = 0;
   final TextEditingController _notasController = TextEditingController();
-  final TextEditingController _lugarController = TextEditingController(text: 'Videollamada / Consultorio virtual');
 
   @override
   void initState() {
     super.initState();
     _cargarDatos();
+  }
+
+  @override
+  void dispose() {
+    _notasController.dispose();
+    super.dispose();
   }
 
   Future<void> _cargarDatos() async {
@@ -126,7 +131,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
           'especialidad': widget.profesional.especialidad,
           'modalidad': _modalidadSeleccionada,
           'fecha_hora': fechaHoraFinal.toIso8601String(),
-          'lugar_o_link': _lugarController.text.trim(),
+          'lugar_o_link': '',
           'notas': _notasController.text.trim(),
           'estado': 'PROGRAMADA',
         },
@@ -329,19 +334,6 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                           }).toList(),
                         ),
                   const SizedBox(height: 24),
-                  const Text(
-                    '3. Lugar o Link de atención',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _lugarController,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Ej. Consultorio 302 o link de Meet/Zoom',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   const Text(
                     'Notas o motivo de consulta (opcional)',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
