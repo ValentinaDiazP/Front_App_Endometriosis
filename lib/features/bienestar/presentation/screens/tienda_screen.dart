@@ -17,6 +17,7 @@ class _TiendaScreenState extends State<TiendaScreen> {
   List<Producto> _productos = [];
   bool _isLoading = true;
   String _categoriaSeleccionada = 'TODOS';
+  late final ScrollController _scrollController;
 
   final List<Map<String, String>> _categorias = [
     {'key': 'TODOS', 'label': 'Todos'},
@@ -128,7 +129,26 @@ class _TiendaScreenState extends State<TiendaScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     _cargarProductos();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _desplazarCategorias(double delta) {
+    final nuevoOffset = (_scrollController.offset + delta).clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+    _scrollController.animateTo(
+      nuevoOffset,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   Future<void> _cargarProductos() async {
@@ -193,25 +213,22 @@ class _TiendaScreenState extends State<TiendaScreen> {
       ),
       body: Column(
         children: [
-          // Banner con Gradiente Corporativo
-          Container(
-            margin: const EdgeInsets.all(16),
-            child: Material(
-              color: Colors.transparent,
-              elevation: 4,
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  // Buscar el producto destacado real (ej. "Bolsa Térmica de Alivio" con id: 1) o usar el primer producto disponible
-                  final productoDestacado = _productos.isNotEmpty
-                      ? _productos.firstWhere(
-                          (p) => p.nombre.contains('Bolsa Térmica'),
-                          orElse: () => _productos.first,
-                        )
-                      : null;
+          // Banner con Gradiente Corporativo Dinámico
+          if (_productos.isNotEmpty) () {
+            final productoDestacado = _productos.firstWhere(
+              (p) => p.nombre.toLowerCase().contains('bolsa térmica'),
+              orElse: () => _productos.reduce((curr, next) => curr.rating > next.rating ? curr : next),
+            );
 
-                  if (productoDestacado != null) {
+            return Container(
+              margin: const EdgeInsets.all(16),
+              child: Material(
+                color: Colors.transparent,
+                elevation: 4,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -221,92 +238,148 @@ class _TiendaScreenState extends State<TiendaScreen> {
                         ),
                       ),
                     );
-                  }
-                },
-                child: Ink(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [BienestarColors.rosa, BienestarColors.rosaMedio],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                  },
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [BienestarColors.rosa, BienestarColors.rosaMedio],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.local_fire_department, color: Colors.white, size: 36),
-                        SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '¡Producto Destacado!',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.local_fire_department, color: Colors.white, size: 36),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      '¡Producto Destacado!',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Text(
+                                        '⭐ ${productoDestacado.rating.toStringAsFixed(1)}',
+                                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Bolsa Térmica de Alivio - Alivio enfocado para dolor pélvico.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white70,
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${productoDestacado.nombre} - ${productoDestacado.descripcion}',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white70,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
-                      ],
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          }() else const SizedBox.shrink(),
           // Categorias Horizontal Filter
           Container(
             height: 60,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _categorias.length,
-              itemBuilder: (context, index) {
-                final cat = _categorias[index];
-                final isSelected = _categoriaSeleccionada == cat['key'];
-                return Padding(
-                  padding: EdgeInsets.only(
-                    left: index == 0 ? 16 : 8,
-                    right: index == _categorias.length - 1 ? 16 : 0,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  height: 36,
+                  width: 36,
+                  decoration: BoxDecoration(
+                    color: BienestarColors.rosaClaro,
+                    shape: BoxShape.circle,
                   ),
-                  child: ChoiceChip(
-                    label: Text(cat['label']!),
-                    selected: isSelected,
-                    selectedColor: BienestarColors.rosaMedio,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.grey.shade800,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    backgroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(
-                        color: isSelected ? BienestarColors.rosaMedio : Colors.grey.shade300,
-                      ),
-                    ),
-                    onSelected: (selected) {
-                      setState(() {
-                        _categoriaSeleccionada = cat['key']!;
-                      });
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.chevron_left, size: 20, color: BienestarColors.rosa),
+                    onPressed: () => _desplazarCategorias(-150),
+                    tooltip: 'Desplazar a la izquierda',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _categorias.length,
+                    itemBuilder: (context, index) {
+                      final cat = _categorias[index];
+                      final isSelected = _categoriaSeleccionada == cat['key'];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          left: index == 0 ? 0 : 8,
+                          right: index == _categorias.length - 1 ? 0 : 8,
+                        ),
+                        child: ChoiceChip(
+                          label: Text(cat['label']!),
+                          selected: isSelected,
+                          selectedColor: BienestarColors.rosaMedio,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.white : Colors.grey.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected ? BienestarColors.rosaMedio : Colors.grey.shade300,
+                            ),
+                          ),
+                          onSelected: (selected) {
+                            setState(() {
+                              _categoriaSeleccionada = cat['key']!;
+                            });
+                          },
+                        ),
+                      );
                     },
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  height: 36,
+                  width: 36,
+                  decoration: BoxDecoration(
+                    color: BienestarColors.rosaClaro,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.chevron_right, size: 20, color: BienestarColors.rosa),
+                    onPressed: () => _desplazarCategorias(150),
+                    tooltip: 'Desplazar a la derecha',
+                  ),
+                ),
+              ],
             ),
           ),
           // Grid of products

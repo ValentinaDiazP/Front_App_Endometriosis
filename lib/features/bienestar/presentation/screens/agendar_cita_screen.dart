@@ -21,27 +21,42 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
   List<DisponibilidadSlot> _slots = [];
   DateTime _fechaSeleccionada = DateTime.now().add(const Duration(days: 1));
   DisponibilidadSlot? _slotSeleccionado;
+  String _modalidadSeleccionada = 'VIRTUAL';
+  int _citasPrevias = 0;
   final TextEditingController _notasController = TextEditingController();
-  final TextEditingController _lugarController = TextEditingController(text: 'Videollamada / Consultorio virtual');
 
   @override
   void initState() {
     super.initState();
-    _cargarDisponibilidad();
+    _cargarDatos();
   }
 
-  Future<void> _cargarDisponibilidad() async {
+  @override
+  void dispose() {
+    _notasController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _cargarDatos() async {
     setState(() {
       _cargando = true;
     });
     try {
       final token = AuthService.token ?? '';
       final fechaStr = DateFormat('yyyy-MM-dd').format(_fechaSeleccionada);
+      
+      // Obtener slots y citas previas en paralelo o secuencial
       final rawSlots = await BienestarService.obtenerDisponibilidad(widget.profesional.id, fecha: fechaStr, token: token);
       
+      if (token.isNotEmpty) {
+        try {
+          final citas = await BienestarService.obtenerCitas(token: token);
+          _citasPrevias = citas.where((c) => c.especialista == widget.profesional.id).length;
+        } catch (_) {}
+      }
+
       setState(() {
         _slots = rawSlots.map((hora) {
-          // hora es un string 'HH:MM' devuelto por el backend
           final partes = hora.split(':');
           final h = int.tryParse(partes[0]) ?? 9;
           final m = partes.length > 1 ? (int.tryParse(partes[1]) ?? 0) : 0;
@@ -57,18 +72,15 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
           );
         }).toList();
         _cargando = false;
-        _slotSeleccionado = null; // Reiniciar selección al cambiar fecha
+        _slotSeleccionado = null;
       });
     } catch (e) {
       setState(() {
         _cargando = false;
-        // Mocks por defecto si falla la red
         _slots = [
           DisponibilidadSlot(id: 1, diaSemana: 'Lunes', horaInicio: '09:00', horaFin: '10:00'),
           DisponibilidadSlot(id: 2, diaSemana: 'Martes', horaInicio: '10:30', horaFin: '11:30'),
           DisponibilidadSlot(id: 3, diaSemana: 'Miércoles', horaInicio: '15:00', horaFin: '16:00'),
-          DisponibilidadSlot(id: 4, diaSemana: 'Jueves', horaInicio: '16:30', horaFin: '17:30'),
-          DisponibilidadSlot(id: 5, diaSemana: 'Viernes', horaInicio: '11:00', horaFin: '12:00'),
         ];
       });
     }
@@ -86,7 +98,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
       setState(() {
         _fechaSeleccionada = picked;
       });
-      _cargarDisponibilidad();
+      _cargarDatos();
     }
   }
 
@@ -117,8 +129,9 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
         data: {
           'especialista': widget.profesional.id,
           'especialidad': widget.profesional.especialidad,
+          'modalidad': _modalidadSeleccionada,
           'fecha_hora': fechaHoraFinal.toIso8601String(),
-          'lugar_o_link': _lugarController.text.trim(),
+          'lugar_o_link': '',
           'notas': _notasController.text.trim(),
           'estado': 'PROGRAMADA',
         },
@@ -127,7 +140,7 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Cita agendada con éxito! Estado: Programada (Azul)')),
+        const SnackBar(content: Text('¡Cita agendada con éxito! Has sumado bienestar a tu camino.')),
       );
       Navigator.pop(context, true);
     } catch (e) {
@@ -211,8 +224,70 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  // Tarjeta de continuidad y modalidad
+                  Card(
+                    color: BienestarColors.rosaClaro.withOpacity(0.5),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: BienestarColors.rosaMedio)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.favorite, color: BienestarColors.rosa, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Vínculo de Confianza (${_citasPrevias}/3 citas)',
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: BienestarColors.rosaOscuro),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _citasPrevias >= 3
+                                ? '¡Felicidades! Ya completaste 3 encuentros con este especialista y desbloqueaste tu insignia de continuidad.'
+                                : 'Llevas $_citasPrevias de 3 citas con este especialista. ¡Completa 3 para fortalecer tu cuidado y desbloquear una insignia especial!',
+                            style: TextStyle(fontSize: 12.5, color: Colors.grey[800]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   const Text(
-                    '1. Selecciona la Fecha',
+                    '1. Selecciona la Modalidad',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (widget.profesional.atiendeVirtual)
+                        Expanded(
+                          child: RadioListTile<String>(
+                            title: const Text('Virtual'),
+                            value: 'VIRTUAL',
+                            groupValue: _modalidadSeleccionada,
+                            activeColor: BienestarColors.rosa,
+                            onChanged: (v) => setState(() => _modalidadSeleccionada = v!),
+                          ),
+                        ),
+                      if (widget.profesional.atiendePresencial)
+                        Expanded(
+                          child: RadioListTile<String>(
+                            title: const Text('Presencial'),
+                            value: 'PRESENCIAL',
+                            groupValue: _modalidadSeleccionada,
+                            activeColor: BienestarColors.rosa,
+                            onChanged: (v) => setState(() => _modalidadSeleccionada = v!),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '2. Selecciona la Fecha',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
@@ -259,19 +334,6 @@ class _AgendarCitaScreenState extends State<AgendarCitaScreen> {
                           }).toList(),
                         ),
                   const SizedBox(height: 24),
-                  const Text(
-                    '3. Lugar o Link de atención',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _lugarController,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Ej. Consultorio 302 o link de Meet/Zoom',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   const Text(
                     'Notas o motivo de consulta (opcional)',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

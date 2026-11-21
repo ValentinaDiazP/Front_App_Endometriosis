@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class Producto {
   final int id;
   final String nombre;
@@ -36,10 +38,10 @@ class Producto {
     String imgUrl = json['imagen_url'] ?? '';
     String imgFinal = json['imagen_final'] ?? json['imagen_url'] ?? '';
     if (imgFinal.startsWith('/media/')) {
-      imgFinal = 'http://10.0.2.2:8000$imgFinal';
+      imgFinal = kIsWeb ? 'http://127.0.0.1:8000$imgFinal' : 'http://10.0.2.2:8000$imgFinal';
     }
     if (imgUrl.startsWith('/media/')) {
-      imgUrl = 'http://10.0.2.2:8000$imgUrl';
+      imgUrl = kIsWeb ? 'http://127.0.0.1:8000$imgUrl' : 'http://10.0.2.2:8000$imgUrl';
     }
 
     return Producto(

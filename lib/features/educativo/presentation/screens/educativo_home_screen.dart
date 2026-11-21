@@ -75,18 +75,6 @@ class _EducativoHomeScreenState extends State<EducativoHomeScreen> {
                 );
               },
             ),
-            IconButton(
-              icon: const Icon(Icons.support_agent),
-              tooltip: 'Asistente Endometriosis',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ChatbotScreen(token: token),
-                  ),
-                );
-              },
-            ),
           ],
           bottom: const TabBar(
             labelColor: Colors.white,

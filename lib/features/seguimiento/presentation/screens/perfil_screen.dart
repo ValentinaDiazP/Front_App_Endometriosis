@@ -373,11 +373,155 @@ class _PerfilScreenState extends State<PerfilScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: _abrirPoliticaDatos,
+              icon: const Icon(Icons.privacy_tip_outlined, color: Colors.pink),
+              label: const Text('Política de Tratamiento de Datos Personales'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: const BorderSide(color: Colors.pink),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _eliminarCuentaYDatos,
+              icon: const Icon(Icons.delete_forever, color: Colors.white),
+              label: const Text('Eliminar cuenta y datos'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
     );
   }
+  void _abrirPoliticaDatos() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(24),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Política de Tratamiento de Datos',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(),
+              const SizedBox(height: 12),
+              const Text(
+                '1. Responsable y Finalidad',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Florecer Bienestar S.A.S. (en adelante "Florecer") es el responsable del tratamiento de sus datos personales y sensibles de salud. La finalidad de la recolección es la prestación de servicios de bienestar, seguimiento de ciclos y salud femenina, personalización de contenidos psicoeducativos, agendamiento de citas médicas y soporte en la plataforma.',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '2. Carácter Facultativo de Datos Sensibles de Salud',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'El usuario no está obligado a autorizar el tratamiento de datos sensibles (síntomas, diagnósticos, ciclo menstrual). Sin embargo, al tratarse de una aplicación especializada en salud femenina, dichos datos son indispensables para el funcionamiento y personalización de las funciones de seguimiento y bienestar.',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '3. Almacenamiento Seguro en la Nube',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Sus datos son almacenados de forma segura en bases de datos PostgreSQL / Neon Cloud con cifrado robusto HTTPS/TLS en tránsito y en reposo. Contamos con autorización de transmisión internacional de datos conforme al Artículo 26 de la Ley 1581 de 2012 bajo estrictos estándares de seguridad y confidencialidad.',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '4. Canal de Contacto y Derechos ARCO',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Usted tiene derecho a conocer, actualizar, rectificar sus datos, suprimir información y revocar la autorización en cualquier momento. Para ejercer sus derechos ARCO o consultas, contáctenos en: soporte@florecerbienestar.com.',
+                style: TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _eliminarCuentaYDatos() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar cuenta y datos'),
+        content: const Text(
+          '¿Estás segura de que deseas eliminar permanentemente tu cuenta y todos tus datos personales de salud? Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar definitivamente'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true || !mounted) return;
+
+    try {
+      await AuthService.eliminarCuenta(widget.token);
+      AuthService.token = null;
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil('/', (_) => false);
+    } catch (e) {
+      if (!mounted) return;
+      final mensaje = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensaje), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+
  
   Future<void> _irAPremium() async {
     final activado = await Navigator.of(context).push<bool>(

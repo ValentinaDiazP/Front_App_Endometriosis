@@ -12,14 +12,22 @@ class MisCitasScreen extends StatefulWidget {
   State<MisCitasScreen> createState() => _MisCitasScreenState();
 }
 
-class _MisCitasScreenState extends State<MisCitasScreen> {
+class _MisCitasScreenState extends State<MisCitasScreen> with SingleTickerProviderStateMixin {
   bool _cargando = true;
   List<CitaMedica> _citas = [];
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _cargarCitas();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _cargarCitas() async {
@@ -38,6 +46,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
             id: 1,
             nombreEspecialista: 'Dra. Sofía Martínez',
             especialidad: 'Ginecología y Obstetricia',
+            modalidad: 'VIRTUAL',
             fechaHora: DateTime.now().add(const Duration(days: 2, hours: 3)),
             lugarOLink: 'Consultorio 402 - Clínica Bienestar',
             estado: 'PROGRAMADA',
@@ -48,6 +57,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
             id: 2,
             nombreEspecialista: 'Dr. Carlos Gómez',
             especialidad: 'Endocrinología',
+            modalidad: 'PRESENCIAL',
             fechaHora: DateTime.now().add(const Duration(days: 5, hours: 1)),
             lugarOLink: 'https://meet.google.com/abc-defg-hij',
             estado: 'CONFIRMADA',
@@ -60,18 +70,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
   }
 
   Color _obtenerColorCardFondo(String estado) {
-    switch (estado) {
-      case 'PROGRAMADA':
-        return BienestarColors.rosaClaro.withOpacity(0.15); // Rosado Claro
-      case 'CONFIRMADA':
-        return const Color(0xFFFCE4EC); 
-      case 'COMPLETADA':
-        return BienestarColors.rosaMedio.withOpacity(0.3); // Rosa medio
-      case 'CANCELADA':
-        return Colors.grey.shade100;
-      default:
-        return Colors.white;
-    }
+    return Colors.white;
   }
 
   Color _obtenerColorBorde(String estado) {
@@ -154,6 +153,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
             especialistaNombre: c.especialistaNombre,
             nombreEspecialista: c.nombreEspecialista,
             especialidad: c.especialidad,
+            modalidad: c.modalidad,
             fechaHora: fechaHoraActualizada,
             lugarOLink: c.lugarOLink,
             estado: 'PROGRAMADA',
@@ -245,7 +245,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
             ],
           ),
           content: const Text(
-            '¡Has completado tu cita médica exitosamente!\n\nHas ganado +50 Puntos de Gamificación por cuidar de tu salud y bienestar.',
+            '¡Has completado tu cita con amor y compromiso hacia ti misma!\n\nHas ganado +50 puntos para tu bienestar y autocuidado por priorizar tu salud.',
             style: TextStyle(fontSize: 16),
           ),
           actions: [
@@ -269,6 +269,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
               especialistaNombre: c.especialistaNombre,
               nombreEspecialista: c.nombreEspecialista,
               especialidad: c.especialidad,
+              modalidad: c.modalidad,
               fechaHora: c.fechaHora,
               lugarOLink: c.lugarOLink,
               estado: 'COMPLETADA',
@@ -292,7 +293,7 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
             ],
           ),
           content: const Text(
-            '¡Has completado tu cita médica exitosamente!\n\nHas ganado +50 Puntos de Gamificación por cuidar de tu salud y bienestar.',
+            '¡Has completado tu cita con amor y compromiso hacia ti misma!\n\nHas ganado +50 puntos para tu bienestar y autocuidado por priorizar tu salud.',
             style: TextStyle(fontSize: 16),
           ),
           actions: [
@@ -308,64 +309,73 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final proximasCitas = _citas.where((c) => !c.fechaHora.isBefore(now)).toList();
+    final historialCitas = _citas.where((c) => c.fechaHora.isBefore(now)).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis Citas Médicas'),
         backgroundColor: BienestarColors.rosa,
         foregroundColor: Colors.white,
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(text: 'Próximas'),
+            Tab(text: 'Historial'),
+          ],
+        ),
       ),
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
-          : _citas.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.event_note, size: 72, color: BienestarColors.rosaClaro),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No tienes citas agendadas',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Agenda una cita con nuestros profesionales para recibir acompañamiento personalizado.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Agendar una cita'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: BienestarColors.rosa,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildListaCitas(proximasCitas, esHistorial: false),
+                _buildListaCitas(historialCitas, esHistorial: true),
+              ],
+            ),
+    );
+  }
+
+
+                  Widget _buildListaCitas(List<CitaMedica> listaCitas, {required bool esHistorial}) {
+              if (listaCitas.isEmpty) {
+                return Center(
+                  child: Text(
+                    esHistorial
+                        ? 'No tienes citas en tu historial.'
+                        : 'No tienes citas próximas agendadas.',
+                    style: const TextStyle(color: Colors.black54, fontSize: 15),
                   ),
-                )
-              : ListView.builder(
+                );
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async {},
+                child: ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: _citas.length,
+                  itemCount: listaCitas.length,
                   itemBuilder: (context, index) {
-                    final cita = _citas[index];
+                    final cita = listaCitas[index];
                     final colorFondo = _obtenerColorCardFondo(cita.estado);
                     final colorBorde = _obtenerColorBorde(cita.estado);
                     final iconoEstado = _obtenerIconoEstado(cita.estado);
                     final fechaFormateada = DateFormat('dd/MM/yyyy hh:mm a').format(cita.fechaHora);
+                    final nombreEspecialista = (cita.especialistaNombre != null && cita.especialistaNombre!.isNotEmpty)
+                        ? cita.especialistaNombre!
+                        : cita.nombreEspecialista;
 
                     return Card(
                       color: colorFondo,
-                      elevation: 3,
+                      elevation: 2,
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: colorBorde, width: 1.5),
+                        side: BorderSide(color: BienestarColors.rosa.withOpacity(0.2), width: 1),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -400,11 +410,13 @@ class _MisCitasScreenState extends State<MisCitasScreen> {
                               cita.especialidad,
                               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Especialista: ${cita.nombreEspecialista}',
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: BienestarColors.rosa),
-                            ),
+                            if (nombreEspecialista.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Especialista: $nombreEspecialista',
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: BienestarColors.rosa),
+                              ),
+                            ],
                             const SizedBox(height: 4),
                             Text(
                               'Lugar / Link: ${cita.lugarOLink}',

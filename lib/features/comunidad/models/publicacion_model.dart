@@ -4,6 +4,7 @@ class Comentario {
   final String texto;
   final String fechaCreacion;
   final int totalLikes;
+  final bool meGusta;
 
   Comentario({
     required this.id,
@@ -11,7 +12,26 @@ class Comentario {
     required this.texto,
     required this.fechaCreacion,
     this.totalLikes = 0,
+    this.meGusta = false,
   });
+
+  Comentario copyWith({
+    int? id,
+    String? usuarioNombre,
+    String? texto,
+    String? fechaCreacion,
+    int? totalLikes,
+    bool? meGusta,
+  }) {
+    return Comentario(
+      id: id ?? this.id,
+      usuarioNombre: usuarioNombre ?? this.usuarioNombre,
+      texto: texto ?? this.texto,
+      fechaCreacion: fechaCreacion ?? this.fechaCreacion,
+      totalLikes: totalLikes ?? this.totalLikes,
+      meGusta: meGusta ?? this.meGusta,
+    );
+  }
 
   factory Comentario.fromJson(Map<String, dynamic> json) {
     return Comentario(
@@ -20,6 +40,7 @@ class Comentario {
       texto: json['texto'] ?? '',
       fechaCreacion: json['fecha_creacion'] ?? '',
       totalLikes: json['total_likes'] ?? 0,
+      meGusta: json['me_gusta'] ?? false,
     );
   }
 }
@@ -48,6 +69,32 @@ class Publicacion {
     required this.totalComentarios,
     required this.comentarios,
   });
+
+  Publicacion copyWith({
+    int? id,
+    String? usuarioNombre,
+    String? contenido,
+    String? imagenUrl,
+    String? fechaCreacion,
+    String? categoria,
+    int? totalLikes,
+    bool? meGusta,
+    int? totalComentarios,
+    List<Comentario>? comentarios,
+  }) {
+    return Publicacion(
+      id: id ?? this.id,
+      usuarioNombre: usuarioNombre ?? this.usuarioNombre,
+      contenido: contenido ?? this.contenido,
+      imagenUrl: imagenUrl ?? this.imagenUrl,
+      fechaCreacion: fechaCreacion ?? this.fechaCreacion,
+      categoria: categoria ?? this.categoria,
+      totalLikes: totalLikes ?? this.totalLikes,
+      meGusta: meGusta ?? this.meGusta,
+      totalComentarios: totalComentarios ?? this.totalComentarios,
+      comentarios: comentarios ?? this.comentarios,
+    );
+  }
 
   factory Publicacion.fromJson(Map<String, dynamic> json) {
     return Publicacion(

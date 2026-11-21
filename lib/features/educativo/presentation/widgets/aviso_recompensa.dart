@@ -7,16 +7,16 @@ import '../../models/progreso_aprendizaje.dart';
 void mostrarAvisoRecompensa(BuildContext context, ResultadoGamificacion r) {
   final lineas = <String>[];
   if (r.puntosGanados > 0) {
-    lineas.add('+${r.puntosGanados} puntos');
+     lineas.add('🌱 Has sumado +${r.puntosGanados} puntos para tu bienestar y autocuidado.');
   }
   if (r.rachaActual > 1) {
-    lineas.add('Racha de aprendizaje: ${r.rachaActual} días 🔥');
+     lineas.add('🔥 Tu constancia florece: racha de ${r.rachaActual} días con el autocuidado.');
   }
   for (final nombre in r.insigniasNuevas) {
-    lineas.add('🏅 Nueva insignia: $nombre');
+     lineas.add('🏅 ¡Nueva insignia alcanzada con amor propio: $nombre!');
   }
   if (r.subioDeNivel != null) {
-    lineas.add('⬆️ ¡Subiste al nivel ${r.subioDeNivel}!');
+     lineas.add('🌸 ¡Tu camino de bienestar avanza! Has ascendido al nivel ${r.subioDeNivel}.');
   }
   if (lineas.isEmpty) return;
 
